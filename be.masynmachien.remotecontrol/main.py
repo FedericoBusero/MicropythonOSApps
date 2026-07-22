@@ -3,9 +3,7 @@ from mpos import Activity
 import lvgl as lv
 
 # Fri3d badge 2024
-from machine import ADC, Pin
-adcJoyX = ADC(Pin(1))
-adcJoyY = ADC(Pin(3))
+from mpos.board.fri3d_2024 import adc_up_down, adc_left_right
 
 class Main(Activity):
 
@@ -37,8 +35,6 @@ class Main(Activity):
         logging.getLogger("mpos.ui.focus_direction").setLevel(logging.WARNING)
 
     def refresh(self, timer):
-        raw_value = adcJoyX.read_u16()
-        x = raw_value
-        raw_value = adcJoyY.read_u16()
-        y = raw_value
+        y = adc_up_down.read()
+        x = adc_left_right.read()
         print(f"x: {x} y:{y}")
