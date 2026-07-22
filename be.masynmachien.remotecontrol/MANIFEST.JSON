@@ -1,0 +1,21 @@
+{
+  "name": "RemoteControl",
+  "publisher": "FedericoBusero",
+  "short_description": "Remote Control app",
+  "long_description": "Remote Control app",
+  "fullname": "be.masynmachien.remotecontrol",
+  "version": "0.1.0",
+  "category": "development",
+  "activities": [
+    {
+      "entrypoint": "main.py",
+      "classname": "Main",
+      "intent_filters": [
+        {
+          "action": "main",
+          "category": "launcher"
+        }
+      ]
+    }
+  ]
+}
