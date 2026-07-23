@@ -96,14 +96,17 @@ class Main(Activity):
             current_value = self.slider1.get_value()
             new_value = min(1000, current_value + 10)
             self.slider1.set_value(new_value, False)
+            self.on_slider_change(None)
         if btn_b.value() == 0:
             #print("Knop B is ingedrukt!")
             current_value = self.slider1.get_value()
             new_value = max(-1000, current_value - 10)
             self.slider1.set_value(new_value, False)
+            self.on_slider_change(None)
         if btn_a.value() == 0:
             #print("Knop A is ingedrukt!")
             self.slider1.set_value(0, False)
+            self.on_slider_change(None)
 
     def refresh_joystick(self, timer):
         # Fri3d badge 2024
