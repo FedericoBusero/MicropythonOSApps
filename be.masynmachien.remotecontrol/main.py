@@ -55,6 +55,7 @@ class Main(Activity):
         self.slider1.set_range(-1000, 1000)
         self.slider1.set_value(0, False)
         self.slider1.align(lv.ALIGN.TOP_LEFT, 30, 80)
+        self.slider1.add_event_cb(self.compensate_joystick_cb, lv.EVENT.KEY, None)
         self.slider1.add_event_cb(self.on_slider_change, lv.EVENT.VALUE_CHANGED, None)
         
         # Label om de slider waarde te tonen
@@ -127,3 +128,19 @@ class Main(Activity):
     def on_slider_change(self, event):
         if self.slider1_label:
             self.slider1_label.set_text(f"Waarde: {self.slider1.get_value()}")
+
+    def compensate_joystick_cb(self, e):
+        if e.get_code() == lv.EVENT.KEY:
+            key = e.get_key()
+            slider_obj = self.slider1
+            current_val = slider_obj.get_value()
+            
+            # Als de joystick RIGHT/UP/LEFT/DOWN key event geeft, wordt de waarde aangepast +/- 1, dan
+            # doen we net omgekeerde om waarde weer goed te krijgen
+            if key in (lv.KEY.RIGHT, lv.KEY.UP):
+                slider_obj.set_value(current_val - 1, None)
+                self.on_slider_change(None)
+                
+            elif key in (lv.KEY.LEFT, lv.KEY.DOWN):
+                slider_obj.set_value(current_val + 1, None)
+                self.on_slider_change(None)
