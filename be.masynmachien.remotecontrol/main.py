@@ -4,7 +4,7 @@ import lvgl as lv
 from mpos import WifiService
 
 # Fri3d badge 2024
-from mpos.board.fri3d_2024 import adc_up_down, adc_left_right
+from mpos.board.fri3d_2024 import adc_up_down, adc_left_right, btn_y, btn_b, btn_a
 
 JOYSTICK_RECTANGLE_WIDTH=const(80)
 JOYSTICK_RECTANGLE_HEIGHT=const(80)
@@ -14,6 +14,7 @@ class Main(Activity):
 
     refresh_joystick_timer = None
     refresh_wifi_timer = None
+    refresh_button_timer = None
     wifi_label = None
 
     def get_wifi_ssid(self):
@@ -50,12 +51,25 @@ class Main(Activity):
         self.circ_area.set_style_bg_color(lv.color_hex(0x00FF00), lv.PART.MAIN)
         self.circ_area.set_style_border_width(0, lv.PART.MAIN)
         
+        self.slider1 = lv.slider(screen)
+        self.slider1.set_range(-1000, 1000)
+        self.slider1.set_value(0, False)
+        self.slider1.align(lv.ALIGN.TOP_LEFT, 30, 80)
+        self.slider1.add_event_cb(self.on_slider_change, lv.EVENT.VALUE_CHANGED, None)
+        
+        # Label om de slider waarde te tonen
+        self.slider1_label = lv.label(screen)
+        self.slider1_label.set_text("Waarde: 0")
+        self.slider1_label.align(lv.ALIGN.TOP_LEFT, 30, 120)
+
+        
         self.setContentView(screen)
 
     def onStart(self, screen):
         print("starting joystick refresh_timer")
         self.refresh_joystick_timer = lv.timer_create(self.refresh_joystick, 80, None)
         self.refresh_wifi_timer = lv.timer_create(self.refresh_wifi, 10000, None)
+        self.refresh_button_timer = lv.timer_create(self.refresh_buttons, 80, None)
         
         # Silence the MPOS focus_direction logger while this screen is active (joystick events)
         logging.getLogger("mpos.ui.focus_direction").setLevel(logging.ERROR)
@@ -69,8 +83,27 @@ class Main(Activity):
             print("stopping wifi refresh_timer")
             self.refresh_wifi_timer.delete()
 
+        if self.refresh_button_timer:
+            print("stopping button refresh_timer")
+            self.refresh_button_timer.delete()
+
         # Restore default logging level when leaving
         logging.getLogger("mpos.ui.focus_direction").setLevel(logging.WARNING)
+
+    def refresh_buttons(self, timer):
+        if btn_y.value() == 0:
+            #print("Knop Y is ingedrukt!")
+            current_value = self.slider1.get_value()
+            new_value = min(1000, current_value + 10)
+            self.slider1.set_value(new_value, False)
+        if btn_b.value() == 0:
+            #print("Knop B is ingedrukt!")
+            current_value = self.slider1.get_value()
+            new_value = max(-1000, current_value - 10)
+            self.slider1.set_value(new_value, False)
+        if btn_a.value() == 0:
+            #print("Knop A is ingedrukt!")
+            self.slider1.set_value(0, False)
 
     def refresh_joystick(self, timer):
         # Fri3d badge 2024
@@ -87,3 +120,7 @@ class Main(Activity):
     def refresh_wifi(self, timer):
         if self.wifi_label:
             self.wifi_label.set_text(self.get_wifi_ssid())
+            
+    def on_slider_change(self, event):
+        if self.slider1_label:
+            self.slider1_label.set_text(f"Waarde: {self.slider1.get_value()}")
