@@ -10,9 +10,9 @@ import network
 # Fri3d badge 2024
 from mpos.board.fri3d_2024 import adc_up_down, adc_left_right, btn_y, btn_b, btn_a
 
-JOYSTICK_RECTANGLE_WIDTH=const(80)
-JOYSTICK_RECTANGLE_HEIGHT=const(80)
-JOYSTICK_CIRCLE_RADIUS=const(30)
+JOYSTICK_RECTANGLE_WIDTH = const(80)
+JOYSTICK_RECTANGLE_HEIGHT = const(80)
+JOYSTICK_CIRCLE_RADIUS = const(30)
 
 
 class Main(Activity):
@@ -48,7 +48,7 @@ class Main(Activity):
         # Create a black rectangle with a green border
         self.rect = lv.obj(screen)
         self.rect.set_size(JOYSTICK_RECTANGLE_WIDTH, JOYSTICK_RECTANGLE_HEIGHT)
-        self.rect.set_style_radius(0,lv.PART.MAIN)
+        self.rect.set_style_radius(0, lv.PART.MAIN)
         self.rect.set_style_bg_color(lv.color_black(), lv.PART.MAIN)
         self.rect.set_style_border_color(lv.color_hex(0x00FF00), lv.PART.MAIN)
         self.rect.set_style_border_width(1, lv.PART.MAIN)
@@ -57,7 +57,7 @@ class Main(Activity):
 
         self.circ_area = lv.obj(self.rect)
         self.circ_area.set_size(JOYSTICK_CIRCLE_RADIUS, JOYSTICK_CIRCLE_RADIUS)
-        self.circ_area.set_style_radius(lv.RADIUS_CIRCLE,lv.PART.MAIN)
+        self.circ_area.set_style_radius(lv.RADIUS_CIRCLE, lv.PART.MAIN)
         self.circ_area.set_style_bg_color(lv.color_hex(0x00FF00), lv.PART.MAIN)
         self.circ_area.set_style_border_width(0, lv.PART.MAIN)
         
@@ -73,7 +73,6 @@ class Main(Activity):
         self.slider1_label.set_text("Waarde: 0")
         self.slider1_label.align(lv.ALIGN.TOP_LEFT, 30, 100)
 
-        
         self.setContentView(screen)
 
     def onStart(self, screen):
@@ -114,33 +113,29 @@ class Main(Activity):
 
     def refresh_buttons(self, timer):
         if btn_y.value() == 0:
-            #print("Knop Y is ingedrukt!")
             current_value = self.slider1.get_value()
             new_value = min(1000, current_value + 10)
             self.slider1.set_value(new_value, False)
             self.on_slider_change(None)
         if btn_b.value() == 0:
-            #print("Knop B is ingedrukt!")
             current_value = self.slider1.get_value()
             new_value = max(-1000, current_value - 10)
             self.slider1.set_value(new_value, False)
             self.on_slider_change(None)
         if btn_a.value() == 0:
-            #print("Knop A is ingedrukt!")
             self.slider1.set_value(0, False)
             self.on_slider_change(None)
 
     def refresh_joystick(self, timer):
-        # Fri3d badge 2024
         raw_y = adc_up_down.read()
         raw_x = adc_left_right.read()
-        #print(f"x: {x} y:{y}")
         
-        # Map the analog values to the rectangle's coordinates
-        x_pos = lv.map(raw_x, 0, 4095, -int(JOYSTICK_RECTANGLE_WIDTH/2), int(JOYSTICK_RECTANGLE_WIDTH/2))
-        y_pos = lv.map(raw_y, 4095, 0, -int(JOYSTICK_RECTANGLE_HEIGHT/2), int(JOYSTICK_RECTANGLE_HEIGHT/2))
-        self.circ_area.set_pos(x_pos+int(JOYSTICK_CIRCLE_RADIUS/2),y_pos+int(JOYSTICK_CIRCLE_RADIUS/2))
-        
+        # Map de analoge waarden naar schermcoördinaten voor het bolletje
+        if self.circ_area:
+            x_pos = lv.map(raw_x, 0, 4095, -int(JOYSTICK_RECTANGLE_WIDTH/2), int(JOYSTICK_RECTANGLE_WIDTH/2))
+            y_pos = lv.map(raw_y, 4095, 0, -int(JOYSTICK_RECTANGLE_HEIGHT/2), int(JOYSTICK_RECTANGLE_HEIGHT/2))
+            self.circ_area.set_pos(x_pos + int(JOYSTICK_CIRCLE_RADIUS/2), y_pos + int(JOYSTICK_CIRCLE_RADIUS/2))
+
         # Map de ADC waarden naar het bereik -180 tot 180 voor de WebSocket
         self.joy_x = lv.map(raw_x, 0, 4095, -180, 180)
         self.joy_y = lv.map(raw_y, 4095, 0, -180, 180)
@@ -159,26 +154,21 @@ class Main(Activity):
             slider_obj = self.slider1
             current_val = slider_obj.get_value()
             
-            # Als de joystick RIGHT/UP/LEFT/DOWN key event geeft, wordt de waarde aangepast +/- 1, dan
-            # doen we net omgekeerde om waarde weer goed te krijgen
             if key in (lv.KEY.RIGHT, lv.KEY.UP):
                 slider_obj.set_value(current_val - 1, None)
                 self.on_slider_change(None)
-                
             elif key in (lv.KEY.LEFT, lv.KEY.DOWN):
                 slider_obj.set_value(current_val + 1, None)
                 self.on_slider_change(None)
-                
-                
-    async def send_ping_loop(self,ws):
-        """Sends periodic data to the WebSocket server."""
+
+    async def send_ping_loop(self, ws):
+        """Sends periodic ping data to the WebSocket server."""
         try:
             while True:
-                msg = f"0"
-                print(f"--> Sending: {msg}")
-                
+                msg = "0"
+                print(f"--> Sending ping: {msg}")
                 await ws.send_str(msg)
-                await asyncio.sleep(1) # Send every second
+                await asyncio.sleep(1)  # Send every second
         except asyncio.CancelledError:
             pass
 
@@ -193,13 +183,14 @@ class Main(Activity):
         except asyncio.CancelledError:
             pass
 
-    async def receive_loop(self,ws):
+    async def receive_loop(self, ws):
         """Listens for incoming messages from the server."""
         try:
             async for msg in ws:
                 if msg.type == aiohttp.WSMsgType.TEXT:
                     print(f"<-- Received: {msg.data}")
-                    self.status_label.set_text(msg.data)
+                    if self.status_label:
+                        self.status_label.set_text(msg.data)
                 elif msg.type in (aiohttp.WSMsgType.CLOSED, aiohttp.WSMsgType.ERROR):
                     print("WebSocket connection closed or encountered an error.")
                     break
@@ -209,10 +200,9 @@ class Main(Activity):
             print("Error in receive loop:", e)
 
     async def main_websocket(self):
-        # Construct URL with custom host and port
         SERVER_IP = "192.168.4.1"
         PORT = 82
-        url = f"ws://{SERVER_IP}:{PORT}/"  # Add a specific endpoint path if needed, e.g., /ws
+        url = f"ws://{SERVER_IP}:{PORT}/"
         
         print(f"Connecting to {url}...")
         
@@ -220,8 +210,8 @@ class Main(Activity):
         joy_sender = None
         receiver = None
         
-        async with aiohttp.ClientSession() as session:
-            try:
+        try:
+            async with aiohttp.ClientSession() as session:
                 async with session.ws_connect(url) as ws:
                     print("Connected to 192.168.4.1:82!")
                     
@@ -229,16 +219,16 @@ class Main(Activity):
                     joy_sender = asyncio.create_task(self.send_joystick_loop(ws))
                     receiver = asyncio.create_task(self.receive_loop(ws))
                     
-                    # Keep both tasks running
                     await asyncio.gather(ping_sender, joy_sender, receiver)
-            except OSError as e:
-                print(f"Failed to connect to {url}. Is the server running? Details: {e}")
-            finally:
-                # Zorg dat de subtaken netjes worden stopgezet bij afsluiten
-                if ping_sender:
-                    ping_sender.cancel()
-                if joy_sender:
-                    joy_sender.cancel()
-                if receiver:
-                    receiver.cancel()
-
+        except asyncio.CancelledError:
+            print("WebSocket main task gracefully cancelled.")
+        except OSError as e:
+            print(f"Failed to connect to {url}. Is the server running? Details: {e}")
+        finally:
+            # Zorg dat de subtaken netjes worden stopgezet bij afsluiten
+            if ping_sender:
+                ping_sender.cancel()
+            if joy_sender:
+                joy_sender.cancel()
+            if receiver:
+                receiver.cancel()
