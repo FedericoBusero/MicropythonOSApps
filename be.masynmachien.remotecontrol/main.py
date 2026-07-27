@@ -250,4 +250,6 @@ class Main(Activity):
 
             # Wacht 5 seconden alvorens opnieuw te proberen
             print("Retrying connection in 5 seconds...")
+            if self.status_label:
+                self.status_label.set_text("Retrying in 5 seconds ...")
             await asyncio.sleep(5)
