@@ -3,12 +3,63 @@ from mpos import Activity
 import lvgl as lv
 from mpos import WifiService
 
+import asyncio
+import aiohttp
+import network
+
 # Fri3d badge 2024
 from mpos.board.fri3d_2024 import adc_up_down, adc_left_right, btn_y, btn_b, btn_a
 
 JOYSTICK_RECTANGLE_WIDTH=const(80)
 JOYSTICK_RECTANGLE_HEIGHT=const(80)
 JOYSTICK_CIRCLE_RADIUS=const(30)
+
+# --- 2. MicroPython Async Tasks ---
+async def send_loop(ws):
+    """Sends periodic data to the WebSocket server."""
+    try:
+        while True:
+            msg = f"0"
+            print(f"--> Sending: {msg}")
+            
+            await ws.send_str(msg)
+            await asyncio.sleep(1) # Send every second
+    except asyncio.CancelledError:
+        pass
+
+async def receive_loop(ws):
+    """Listens for incoming messages from the server."""
+    try:
+        async for msg in ws:
+            if msg.type == aiohttp.WSMsgType.TEXT:
+                print(f"<-- Received: {msg.data}")
+            elif msg.type in (aiohttp.WSMsgType.CLOSED, aiohttp.WSMsgType.ERROR):
+                print("WebSocket connection closed or encountered an error.")
+                break
+    except Exception as e:
+        print("Error in receive loop:", e)
+
+# --- 3. Main Connection Logic ---
+async def main_websocket():
+    # Construct URL with custom host and port
+    SERVER_IP = "192.168.4.1"
+    PORT = 82
+    url = f"ws://{SERVER_IP}:{PORT}/"  # Add a specific endpoint path if needed, e.g., /ws
+    
+    print(f"Connecting to {url}...")
+    
+    async with aiohttp.ClientSession() as session:
+        try:
+            async with session.ws_connect(url) as ws:
+                print("Connected to 192.168.4.1:82!")
+                
+                sender = asyncio.create_task(send_loop(ws))
+                receiver = asyncio.create_task(receive_loop(ws))
+                
+                # Keep both tasks running
+                await asyncio.gather(sender, receiver)
+        except OSError as e:
+            print(f"Failed to connect to {url}. Is the server running? Details: {e}")
 
 class Main(Activity):
 
@@ -61,7 +112,7 @@ class Main(Activity):
         # Label om de slider waarde te tonen
         self.slider1_label = lv.label(screen)
         self.slider1_label.set_text("Waarde: 0")
-        self.slider1_label.align(lv.ALIGN.TOP_LEFT, 30, 120)
+        self.slider1_label.align(lv.ALIGN.TOP_LEFT, 30, 100)
 
         
         self.setContentView(screen)
@@ -74,6 +125,11 @@ class Main(Activity):
         
         # Silence the MPOS focus_direction logger while this screen is active (joystick events)
         logging.getLogger("mpos.ui.focus_direction").setLevel(logging.ERROR)
+        
+        print("start websocket program started")
+        # Maak een achtergrondtaak aan op de reeds draaiende asyncio loop
+        loop = asyncio.get_event_loop()
+        self.ws_task = loop.create_task(main_websocket())
 
     def onStop(self, screen):
         if self.refresh_joystick_timer:
