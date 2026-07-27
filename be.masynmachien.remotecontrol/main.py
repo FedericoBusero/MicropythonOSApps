@@ -14,52 +14,6 @@ JOYSTICK_RECTANGLE_WIDTH=const(80)
 JOYSTICK_RECTANGLE_HEIGHT=const(80)
 JOYSTICK_CIRCLE_RADIUS=const(30)
 
-# --- 2. MicroPython Async Tasks ---
-async def send_loop(ws):
-    """Sends periodic data to the WebSocket server."""
-    try:
-        while True:
-            msg = f"0"
-            print(f"--> Sending: {msg}")
-            
-            await ws.send_str(msg)
-            await asyncio.sleep(1) # Send every second
-    except asyncio.CancelledError:
-        pass
-
-async def receive_loop(ws):
-    """Listens for incoming messages from the server."""
-    try:
-        async for msg in ws:
-            if msg.type == aiohttp.WSMsgType.TEXT:
-                print(f"<-- Received: {msg.data}")
-            elif msg.type in (aiohttp.WSMsgType.CLOSED, aiohttp.WSMsgType.ERROR):
-                print("WebSocket connection closed or encountered an error.")
-                break
-    except Exception as e:
-        print("Error in receive loop:", e)
-
-# --- 3. Main Connection Logic ---
-async def main_websocket():
-    # Construct URL with custom host and port
-    SERVER_IP = "192.168.4.1"
-    PORT = 82
-    url = f"ws://{SERVER_IP}:{PORT}/"  # Add a specific endpoint path if needed, e.g., /ws
-    
-    print(f"Connecting to {url}...")
-    
-    async with aiohttp.ClientSession() as session:
-        try:
-            async with session.ws_connect(url) as ws:
-                print("Connected to 192.168.4.1:82!")
-                
-                sender = asyncio.create_task(send_loop(ws))
-                receiver = asyncio.create_task(receive_loop(ws))
-                
-                # Keep both tasks running
-                await asyncio.gather(sender, receiver)
-        except OSError as e:
-            print(f"Failed to connect to {url}. Is the server running? Details: {e}")
 
 class Main(Activity):
 
@@ -67,6 +21,7 @@ class Main(Activity):
     refresh_wifi_timer = None
     refresh_button_timer = None
     wifi_label = None
+    ws_task = None
 
     def get_wifi_ssid(self):
         ssid = WifiService.get_current_ssid()
@@ -129,7 +84,7 @@ class Main(Activity):
         print("start websocket program started")
         # Maak een achtergrondtaak aan op de reeds draaiende asyncio loop
         loop = asyncio.get_event_loop()
-        self.ws_task = loop.create_task(main_websocket())
+        self.ws_task = loop.create_task(self.main_websocket())
 
     def onStop(self, screen):
         if self.refresh_joystick_timer:
@@ -144,6 +99,12 @@ class Main(Activity):
             print("stopping button refresh_timer")
             self.refresh_button_timer.delete()
 
+        # Stop de websocket taak als deze nog draait
+        if self.ws_task:
+            print("stopping websocket task")
+            self.ws_task.cancel()
+            self.ws_task = None
+            
         # Restore default logging level when leaving
         logging.getLogger("mpos.ui.focus_direction").setLevel(logging.WARNING)
 
@@ -200,3 +161,51 @@ class Main(Activity):
             elif key in (lv.KEY.LEFT, lv.KEY.DOWN):
                 slider_obj.set_value(current_val + 1, None)
                 self.on_slider_change(None)
+                
+                
+    async def send_ping_loop(self,ws):
+        """Sends periodic data to the WebSocket server."""
+        try:
+            while True:
+                msg = f"0"
+                print(f"--> Sending: {msg}")
+                
+                await ws.send_str(msg)
+                await asyncio.sleep(1) # Send every second
+        except asyncio.CancelledError:
+            pass
+
+    async def receive_loop(self,ws):
+        """Listens for incoming messages from the server."""
+        try:
+            async for msg in ws:
+                if msg.type == aiohttp.WSMsgType.TEXT:
+                    print(f"<-- Received: {msg.data}")
+                    self.status_label.set_text(msg.data)
+                elif msg.type in (aiohttp.WSMsgType.CLOSED, aiohttp.WSMsgType.ERROR):
+                    print("WebSocket connection closed or encountered an error.")
+                    break
+        except Exception as e:
+            print("Error in receive loop:", e)
+
+    async def main_websocket(self):
+        # Construct URL with custom host and port
+        SERVER_IP = "192.168.4.1"
+        PORT = 82
+        url = f"ws://{SERVER_IP}:{PORT}/"  # Add a specific endpoint path if needed, e.g., /ws
+        
+        print(f"Connecting to {url}...")
+        
+        async with aiohttp.ClientSession() as session:
+            try:
+                async with session.ws_connect(url) as ws:
+                    print("Connected to 192.168.4.1:82!")
+                    
+                    sender = asyncio.create_task(self.send_ping_loop(ws))
+                    receiver = asyncio.create_task(self.receive_loop(ws))
+                    
+                    # Keep both tasks running
+                    await asyncio.gather(sender, receiver)
+            except OSError as e:
+                print(f"Failed to connect to {url}. Is the server running? Details: {e}")
+
