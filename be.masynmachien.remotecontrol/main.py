@@ -127,6 +127,7 @@ class Main(Activity):
             self.on_slider_change(None)
 
     def refresh_joystick(self, timer):
+        # Fri3d badge 2024
         raw_y = adc_up_down.read()
         raw_x = adc_left_right.read()
         
@@ -154,6 +155,8 @@ class Main(Activity):
             slider_obj = self.slider1
             current_val = slider_obj.get_value()
             
+            # Als de joystick RIGHT/UP/LEFT/DOWN key event geeft, wordt de waarde aangepast +/- 1, dan
+            # doen we net omgekeerde om waarde weer goed te krijgen
             if key in (lv.KEY.RIGHT, lv.KEY.UP):
                 slider_obj.set_value(current_val - 1, None)
                 self.on_slider_change(None)
