@@ -37,7 +37,7 @@ class Main(Activity):
         print("onCreate RemoteControl")
         screen = lv.obj()
         self.status_label = lv.label(screen)
-        self.status_label.set_text("Start status")
+        self.status_label.set_text("Trying to connect")
         self.status_label.align(lv.ALIGN.TOP_LEFT, 30, 30)
 
         # SSID Label bovenaan het scherm
@@ -207,31 +207,47 @@ class Main(Activity):
         PORT = 82
         url = f"ws://{SERVER_IP}:{PORT}/"
         
-        print(f"Connecting to {url}...")
-        
-        ping_sender = None
-        joy_sender = None
-        receiver = None
-        
-        try:
-            async with aiohttp.ClientSession() as session:
-                async with session.ws_connect(url) as ws:
-                    print("Connected to 192.168.4.1:82!")
-                    
-                    ping_sender = asyncio.create_task(self.send_ping_loop(ws))
-                    joy_sender = asyncio.create_task(self.send_joystick_loop(ws))
-                    receiver = asyncio.create_task(self.receive_loop(ws))
-                    
-                    await asyncio.gather(ping_sender, joy_sender, receiver)
-        except asyncio.CancelledError:
-            print("WebSocket main task gracefully cancelled.")
-        except OSError as e:
-            print(f"Failed to connect to {url}. Is the server running? Details: {e}")
-        finally:
-            # Zorg dat de subtaken netjes worden stopgezet bij afsluiten
-            if ping_sender:
-                ping_sender.cancel()
-            if joy_sender:
-                joy_sender.cancel()
-            if receiver:
-                receiver.cancel()
+        while True:
+            ping_sender = None
+            joy_sender = None
+            receiver = None
+            
+            try:
+                print(f"Connecting to {url}...")
+                if self.status_label:
+                    self.status_label.set_text("Connecting...")
+
+                async with aiohttp.ClientSession() as session:
+                    async with session.ws_connect(url) as ws:
+                        print("Connected to 192.168.4.1:82!")
+                        if self.status_label:
+                            self.status_label.set_text("Connected")
+                        
+                        ping_sender = asyncio.create_task(self.send_ping_loop(ws))
+                        joy_sender = asyncio.create_task(self.send_joystick_loop(ws))
+                        receiver = asyncio.create_task(self.receive_loop(ws))
+                        
+                        # await asyncio.gather(ping_sender, joy_sender, receiver)
+                        await asyncio.gather(receiver)
+
+            except asyncio.CancelledError:
+                print("WebSocket main task gracefully cancelled.")
+                break  # Stop de loop definitief wanneer de activiteit stopt (onStop)
+
+            except (OSError, aiohttp.ClientError, Exception) as e:
+                print(f"WebSocket connection lost or failed: {e}")
+                if self.status_label:
+                    self.status_label.set_text("Reconnecting ...")
+
+            finally:
+                # Zorg dat de subtaken altijd worden gestopt voordat we opnieuw verbinden
+                if ping_sender:
+                    ping_sender.cancel()
+                if joy_sender:
+                    joy_sender.cancel()
+                if receiver:
+                    receiver.cancel()
+
+            # Wacht 5 seconden alvorens opnieuw te proberen
+            print("Retrying connection in 5 seconds...")
+            await asyncio.sleep(5)
