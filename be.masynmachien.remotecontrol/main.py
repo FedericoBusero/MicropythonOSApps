@@ -22,6 +22,10 @@ class Main(Activity):
     refresh_button_timer = None
     wifi_label = None
     ws_task = None
+    
+    # Joystick waarden (-180 tot 180)
+    joy_x = 0
+    joy_y = 0
 
     def get_wifi_ssid(self):
         ssid = WifiService.get_current_ssid()
@@ -128,15 +132,18 @@ class Main(Activity):
 
     def refresh_joystick(self, timer):
         # Fri3d badge 2024
-        y = adc_up_down.read()
-        x = adc_left_right.read()
+        raw_y = adc_up_down.read()
+        raw_x = adc_left_right.read()
         #print(f"x: {x} y:{y}")
         
         # Map the analog values to the rectangle's coordinates
-        x_pos = lv.map(x, 0, 4095, -int(JOYSTICK_RECTANGLE_WIDTH/2), int(JOYSTICK_RECTANGLE_WIDTH/2))
-        y_pos = lv.map(y, 4095, 0, -int(JOYSTICK_RECTANGLE_HEIGHT/2), int(JOYSTICK_RECTANGLE_HEIGHT/2))
+        x_pos = lv.map(raw_x, 0, 4095, -int(JOYSTICK_RECTANGLE_WIDTH/2), int(JOYSTICK_RECTANGLE_WIDTH/2))
+        y_pos = lv.map(raw_y, 4095, 0, -int(JOYSTICK_RECTANGLE_HEIGHT/2), int(JOYSTICK_RECTANGLE_HEIGHT/2))
         self.circ_area.set_pos(x_pos+int(JOYSTICK_CIRCLE_RADIUS/2),y_pos+int(JOYSTICK_CIRCLE_RADIUS/2))
-
+        
+        # Map de ADC waarden naar het bereik -180 tot 180 voor de WebSocket
+        self.joy_x = lv.map(raw_x, 0, 4095, -180, 180)
+        self.joy_y = lv.map(raw_y, 4095, 0, -180, 180)
 
     def refresh_wifi(self, timer):
         if self.wifi_label:
@@ -175,6 +182,17 @@ class Main(Activity):
         except asyncio.CancelledError:
             pass
 
+    async def send_joystick_loop(self, ws):
+        """Sends live joystick coordinates to the WebSocket server."""
+        try:
+            while True:
+                msg = f"1:{self.joy_x},{self.joy_y}"
+                print(f"--> Sending joystick: {msg}")
+                await ws.send_str(msg)
+                await asyncio.sleep(0.4)  # Send every 400ms
+        except asyncio.CancelledError:
+            pass
+
     async def receive_loop(self,ws):
         """Listens for incoming messages from the server."""
         try:
@@ -198,22 +216,29 @@ class Main(Activity):
         
         print(f"Connecting to {url}...")
         
+        ping_sender = None
+        joy_sender = None
+        receiver = None
+        
         async with aiohttp.ClientSession() as session:
             try:
                 async with session.ws_connect(url) as ws:
                     print("Connected to 192.168.4.1:82!")
                     
-                    sender = asyncio.create_task(self.send_ping_loop(ws))
+                    ping_sender = asyncio.create_task(self.send_ping_loop(ws))
+                    joy_sender = asyncio.create_task(self.send_joystick_loop(ws))
                     receiver = asyncio.create_task(self.receive_loop(ws))
                     
                     # Keep both tasks running
-                    await asyncio.gather(sender, receiver)
+                    await asyncio.gather(ping_sender, joy_sender, receiver)
             except OSError as e:
                 print(f"Failed to connect to {url}. Is the server running? Details: {e}")
             finally:
                 # Zorg dat de subtaken netjes worden stopgezet bij afsluiten
-                if sender:
-                    sender.cancel()
+                if ping_sender:
+                    ping_sender.cancel()
+                if joy_sender:
+                    joy_sender.cancel()
                 if receiver:
                     receiver.cancel()
 
