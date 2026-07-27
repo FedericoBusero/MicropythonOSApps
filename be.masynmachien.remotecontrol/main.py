@@ -185,6 +185,8 @@ class Main(Activity):
                 elif msg.type in (aiohttp.WSMsgType.CLOSED, aiohttp.WSMsgType.ERROR):
                     print("WebSocket connection closed or encountered an error.")
                     break
+        except asyncio.CancelledError:
+            pass
         except Exception as e:
             print("Error in receive loop:", e)
 
@@ -208,4 +210,10 @@ class Main(Activity):
                     await asyncio.gather(sender, receiver)
             except OSError as e:
                 print(f"Failed to connect to {url}. Is the server running? Details: {e}")
+            finally:
+                # Zorg dat de subtaken netjes worden stopgezet bij afsluiten
+                if sender:
+                    sender.cancel()
+                if receiver:
+                    receiver.cancel()
 
