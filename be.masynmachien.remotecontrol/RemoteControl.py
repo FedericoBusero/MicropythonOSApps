@@ -192,7 +192,7 @@ class RemoteControl(Activity):
             # x_pos = lv.map(raw_x, 0, 4095, -int(JOYSTICK_RECTANGLE_WIDTH/2), int(JOYSTICK_RECTANGLE_WIDTH/2))
             # y_pos = lv.map(raw_y, 4095, 0, -int(JOYSTICK_RECTANGLE_HEIGHT/2), int(JOYSTICK_RECTANGLE_HEIGHT/2))
             x_pos = map_joystick(raw_x, 0, 4095, -int(JOYSTICK_RECTANGLE_WIDTH/2), int(JOYSTICK_RECTANGLE_WIDTH/2), center, border)
-            y_pos = map_joystick(raw_y, 4095, 0, -int(JOYSTICK_RECTANGLE_WIDTH/2), int(JOYSTICK_RECTANGLE_WIDTH/2), center, border)
+            y_pos = map_joystick(raw_y, 4095, 0, -int(JOYSTICK_RECTANGLE_HEIGHT/2), int(JOYSTICK_RECTANGLE_HEIGHT/2), center, border)
             self.circ_area.set_pos(x_pos + int(JOYSTICK_CIRCLE_RADIUS/2), y_pos + int(JOYSTICK_CIRCLE_RADIUS/2))
 
         # Map de ADC waarden naar het bereik -180 tot 180 voor de WebSocket
