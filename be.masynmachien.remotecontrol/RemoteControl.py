@@ -15,7 +15,7 @@ JOYSTICK_RECTANGLE_HEIGHT = const(80)
 JOYSTICK_CIRCLE_RADIUS = const(30)
 
 
-class Main(Activity):
+class RemoteControl(Activity):
 
     refresh_joystick_timer = None
     refresh_wifi_timer = None
