@@ -233,7 +233,7 @@ class RemoteControl(Activity):
                 await ws.send_str(msg)
                 await asyncio.sleep(1)  # Send every second
         except (asyncio.CancelledError, OSError):
-            pass
+            raise
         except Exception as e:
             print(f"Ping loop error: {e}", flush=True)
             await ws.close()
@@ -247,7 +247,7 @@ class RemoteControl(Activity):
                 await ws.send_str(msg)
                 await asyncio.sleep(0.160)  # Send every 160ms
         except (asyncio.CancelledError, OSError):
-            pass
+            raise
         except Exception as e:
             print(f"Joystick loop error: {e}", flush=True)
             await ws.close()
@@ -264,7 +264,7 @@ class RemoteControl(Activity):
                     print("WebSocket connection closed or encountered an error.")
                     break
         except (asyncio.CancelledError, OSError):
-            pass
+            raise
         except Exception as e:
             print("Error in receive loop:", e)
 
