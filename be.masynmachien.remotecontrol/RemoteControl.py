@@ -95,7 +95,7 @@ class RemoteControl(Activity):
             if wlan.isconnected():
                 # In MicroPython geeft config('essid') de verbonden SSID terug
                 ssid = wlan.config('essid')
-                ip = wlan.ifconfig()[0]                
+                ip = wlan.ifconfig()[2] # gateway IP adres
                 if ssid and ip:
                     return f"{ssid} {ip}"
         except Exception as e:
