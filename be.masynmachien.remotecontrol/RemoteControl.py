@@ -177,6 +177,9 @@ class RemoteControl(Activity):
                 await asyncio.sleep(1)  # Send every second
         except (asyncio.CancelledError, OSError):
             pass
+        except Exception as e:
+            print(f"Ping loop error: {e}", flush=True)
+            await ws.close()
 
     async def send_joystick_loop(self, ws):
         """Sends live joystick coordinates to the WebSocket server."""
@@ -188,6 +191,9 @@ class RemoteControl(Activity):
                 await asyncio.sleep(0.4)  # Send every 400ms
         except (asyncio.CancelledError, OSError):
             pass
+        except Exception as e:
+            print(f"Joystick loop error: {e}", flush=True)
+            await ws.close()
 
     async def receive_loop(self, ws):
         """Listens for incoming messages from the server."""
