@@ -8,12 +8,12 @@ import aiohttp
 import network
 
 # Fri3d badge 2024
-from mpos.board.fri3d_2024 import adc_up_down, adc_left_right, btn_y, btn_b, btn_a
+from mpos.board.fri3d_2024 import btn_y, btn_b, btn_a
+from Joystick2024 import joystick
 
 JOYSTICK_RECTANGLE_WIDTH = const(80)
 JOYSTICK_RECTANGLE_HEIGHT = const(80)
 JOYSTICK_CIRCLE_RADIUS = const(30)
-
 
 class RemoteControl(Activity):
 
@@ -127,9 +127,7 @@ class RemoteControl(Activity):
             self.on_slider_change(None)
 
     def refresh_joystick(self, timer):
-        # Fri3d badge 2024
-        raw_y = adc_up_down.read()
-        raw_x = adc_left_right.read()
+        raw_x, raw_y = joystick.read_raw()
         
         # Map de analoge waarden naar schermcoördinaten voor het bolletje
         if self.circ_area:
