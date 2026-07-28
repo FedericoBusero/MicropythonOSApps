@@ -16,9 +16,9 @@ else:
     from Joystick2026 import joystick
     from Buttons2026 import buttons
 
-JOYSTICK_RECTANGLE_WIDTH = const(80)
-JOYSTICK_RECTANGLE_HEIGHT = const(80)
-JOYSTICK_CIRCLE_RADIUS = const(30)
+JOYSTICK_RECTANGLE_WIDTH = 100
+JOYSTICK_RECTANGLE_HEIGHT = 100
+JOYSTICK_CIRCLE_RADIUS = 30
 
 def map_joystick(x, in_min, in_max, out_min, out_max, center=50, border=50):
     """
@@ -109,7 +109,7 @@ class RemoteControl(Activity):
         self.rect.set_style_border_color(lv.color_hex(0x00FF00), lv.PART.MAIN)
         self.rect.set_style_border_width(1, lv.PART.MAIN)
         self.rect.remove_flag(lv.obj.FLAG.SCROLLABLE)
-        self.rect.align(lv.ALIGN.TOP_LEFT, 30, 150)
+        self.rect.align(lv.ALIGN.TOP_MID, 0, 120)
 
         self.circ_area = lv.obj(self.rect)
         self.circ_area.set_size(JOYSTICK_CIRCLE_RADIUS, JOYSTICK_CIRCLE_RADIUS)
@@ -120,14 +120,15 @@ class RemoteControl(Activity):
         self.slider1 = lv.slider(screen)
         self.slider1.set_range(-1000, 1000)
         self.slider1.set_value(0, False)
-        self.slider1.align(lv.ALIGN.TOP_LEFT, 30, 80)
+        self.slider1.align(lv.ALIGN.TOP_LEFT, 30, 60)
+        self.slider1.set_style_bg_color(lv.color_hex(0x00FF00), lv.PART.KNOB)
         self.slider1.add_event_cb(self.compensate_joystick_cb, lv.EVENT.KEY, None)
         self.slider1.add_event_cb(self.on_slider_change, lv.EVENT.VALUE_CHANGED, None)
         
         # Label om de slider waarde te tonen
         self.slider1_label = lv.label(screen)
         self.slider1_label.set_text("Waarde: 0")
-        self.slider1_label.align(lv.ALIGN.TOP_LEFT, 30, 100)
+        self.slider1_label.align(lv.ALIGN.TOP_LEFT, 30, 80)
 
         self.setContentView(screen)
 
