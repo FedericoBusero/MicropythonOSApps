@@ -23,39 +23,51 @@ JOYSTICK_CIRCLE_RADIUS = const(30)
 def map_joystick(x, in_min, in_max, out_min, out_max, center=50, border=50):
     """
     Mapt een joystickwaarde met deadzones voor het midden en de randen.
+    Ondersteunt ook omgekeerde bereiken (in_min > in_max of out_min > out_max).
     Returnt altijd een integer.
     """
     in_center = (in_min + in_max) / 2.0
     out_center = (out_min + out_max) / 2.0
     
-    # 1. Begrens de input binnen in_min en in_max
-    x = max(in_min, min(x, in_max))
+    # 1. Begrens x netjes tussen de laagste en hoogste invoerwaarde
+    x_min = min(in_min, in_max)
+    x_max = max(in_min, in_max)
+    x = max(x_min, min(x, x_max))
     
-    # 2. Border check (uiterste waarden vastpinnen op out_min / out_max)
-    if x <= (in_min + border):
-        return int(out_min)
-    if x >= (in_max - border):
-        return int(out_max)
+    # Check richting van de invoer
+    is_in_inverted = in_min > in_max
+    
+    # 2. Border check (uiterste waarden vastpinnen)
+    if not is_in_inverted:
+        if x <= (in_min + border):
+            return int(out_min)
+        if x >= (in_max - border):
+            return int(out_max)
+    else:
+        if x >= (in_min - border):
+            return int(out_min)
+        if x <= (in_max + border):
+            return int(out_max)
         
     # 3. Center check (middenzone vastpinnen op het gemiddelde)
     if abs(x - in_center) <= center:
         return int(round(out_center))
         
     # 4. Schalen buiten de center zone
-    if x < in_center:
-        # Onderste helft (van in_min + border TOT in_center - center)
-        src_min = in_min + border
-        src_max = in_center - center
+    if (not is_in_inverted and x < in_center) or (is_in_inverted and x > in_center):
+        # Onderste helft van de beweging
+        src_min = in_min + border if not is_in_inverted else in_min - border
+        src_max = in_center - center if not is_in_inverted else in_center + center
         dst_min = out_min
         dst_max = out_center
     else:
-        # Bovenste helft (van in_center + center TOT in_max - border)
-        src_min = in_center + center
-        src_max = in_max - border
+        # Bovenste helft van de beweging
+        src_min = in_center + center if not is_in_inverted else in_center - center
+        src_max = in_max - border if not is_in_inverted else in_max + border
         dst_min = out_center
         dst_max = out_max
         
-    # Lineaire schaling en afronden naar een gehele waarde
+    # Lineaire schaling en afronden naar integer
     result = dst_min + (x - src_min) * (dst_max - dst_min) / (src_max - src_min)
     return int(round(result))
 
