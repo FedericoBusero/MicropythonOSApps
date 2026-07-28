@@ -233,9 +233,9 @@ class RemoteControl(Activity):
         try:
             while True:
                 msg = f"1:{self.joy_x},{self.joy_y}"
-                print(f"--> Sending joystick: {msg}")
+                # print(f"--> Sending joystick: {msg}")
                 await ws.send_str(msg)
-                await asyncio.sleep(0.4)  # Send every 400ms
+                await asyncio.sleep(0.16)  # Send every 160ms
         except (asyncio.CancelledError, OSError):
             pass
         except Exception as e:
