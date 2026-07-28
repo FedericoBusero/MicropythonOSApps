@@ -8,8 +8,8 @@
   "category": "development",
   "activities": [
     {
-      "entrypoint": "main.py",
-      "classname": "Main",
+      "entrypoint": "RemoteControl.py",
+      "classname": "RemoteControl",
       "intent_filters": [
         {
           "action": "main",
