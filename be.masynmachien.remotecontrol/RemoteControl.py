@@ -175,7 +175,7 @@ class RemoteControl(Activity):
                 print(f"--> Sending ping: {msg}")
                 await ws.send_str(msg)
                 await asyncio.sleep(1)  # Send every second
-        except asyncio.CancelledError:
+        except (asyncio.CancelledError, OSError):
             pass
 
     async def send_joystick_loop(self, ws):
@@ -186,7 +186,7 @@ class RemoteControl(Activity):
                 print(f"--> Sending joystick: {msg}")
                 await ws.send_str(msg)
                 await asyncio.sleep(0.4)  # Send every 400ms
-        except asyncio.CancelledError:
+        except (asyncio.CancelledError, OSError):
             pass
 
     async def receive_loop(self, ws):
@@ -200,7 +200,7 @@ class RemoteControl(Activity):
                 elif msg.type in (aiohttp.WSMsgType.CLOSED, aiohttp.WSMsgType.ERROR):
                     print("WebSocket connection closed or encountered an error.")
                     break
-        except asyncio.CancelledError:
+        except (asyncio.CancelledError, OSError):
             pass
         except Exception as e:
             print("Error in receive loop:", e)
@@ -237,7 +237,7 @@ class RemoteControl(Activity):
                 print("WebSocket main task gracefully cancelled.")
                 break  # Stop de loop definitief wanneer de activiteit stopt (onStop)
 
-            except (OSError, aiohttp.ClientError, Exception) as e:
+            except (OSError, Exception) as e:
                 print(f"WebSocket connection lost or failed: {e}")
                 if self.status_label:
                     self.status_label.set_text("Reconnecting ...")
