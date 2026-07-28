@@ -5,11 +5,14 @@ from mpos import WifiService
 
 import asyncio
 import aiohttp
-import network
 
 # Fri3d badge 2024
-from mpos.board.fri3d_2024 import btn_y, btn_b, btn_a
+from Buttons2024 import buttons
 from Joystick2024 import joystick
+
+# Fri3d badge 2026
+#from Joystick2026 import joystick
+#from Buttons2026 import buttons
 
 JOYSTICK_RECTANGLE_WIDTH = const(80)
 JOYSTICK_RECTANGLE_HEIGHT = const(80)
@@ -112,17 +115,17 @@ class RemoteControl(Activity):
         logging.getLogger("mpos.ui.focus_direction").setLevel(logging.WARNING)
 
     def refresh_buttons(self, timer):
-        if btn_y.value() == 0:
+        if buttons.get_button_y_value() == 0:
             current_value = self.slider1.get_value()
             new_value = min(1000, current_value + 10)
             self.slider1.set_value(new_value, False)
             self.on_slider_change(None)
-        if btn_b.value() == 0:
+        if buttons.get_button_b_value() == 0:
             current_value = self.slider1.get_value()
             new_value = max(-1000, current_value - 10)
             self.slider1.set_value(new_value, False)
             self.on_slider_change(None)
-        if btn_a.value() == 0:
+        if buttons.get_button_a_value() == 0:
             self.slider1.set_value(0, False)
             self.on_slider_change(None)
 
