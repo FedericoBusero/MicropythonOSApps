@@ -93,11 +93,13 @@ class RemoteControl(Activity):
         print("onCreate RemoteControl")
         screen = lv.obj()
         self.status_label = lv.label(screen)
-        self.status_label.set_text("Trying to connect")
-        self.status_label.align(lv.ALIGN.TOP_LEFT, 30, 30)
+        self.status_label.set_style_text_font(lv.font_montserrat_16, lv.PART.MAIN)
+        self.status_label.set_text("Startup")
+        self.status_label.align(lv.ALIGN.TOP_LEFT, 30, 40)
 
         # SSID Label bovenaan het scherm
         self.wifi_label = lv.label(screen)
+        self.wifi_label.set_style_text_font(lv.font_montserrat_16, lv.PART.MAIN)
         self.wifi_label.set_text(self.get_wifi_ssid())
         self.wifi_label.align(lv.ALIGN.TOP_MID, 0, 10)
         
@@ -120,15 +122,15 @@ class RemoteControl(Activity):
         self.slider1 = lv.slider(screen)
         self.slider1.set_range(-1000, 1000)
         self.slider1.set_value(0, False)
-        self.slider1.align(lv.ALIGN.TOP_LEFT, 30, 60)
+        self.slider1.align(lv.ALIGN.TOP_LEFT, 30, 70)
         self.slider1.set_style_bg_color(lv.color_hex(0x00FF00), lv.PART.KNOB)
         self.slider1.add_event_cb(self.compensate_joystick_cb, lv.EVENT.KEY, None)
         self.slider1.add_event_cb(self.on_slider_change, lv.EVENT.VALUE_CHANGED, None)
         
         # Label om de slider waarde te tonen
         self.slider1_label = lv.label(screen)
-        self.slider1_label.set_text("Waarde: 0")
-        self.slider1_label.align(lv.ALIGN.TOP_LEFT, 30, 80)
+        self.slider1_label.set_text("")
+        self.slider1_label.align(lv.ALIGN.TOP_LEFT, 30, 90)
 
         self.setContentView(screen)
 
