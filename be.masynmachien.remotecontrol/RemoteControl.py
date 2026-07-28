@@ -83,10 +83,24 @@ class RemoteControl(Activity):
     joy_x = 0
     joy_y = 0
 
-    def get_wifi_ssid(self):
+    def get_wifi_ssid2(self):
         ssid = WifiService.get_current_ssid()
         if ssid:
             return f"Wi-Fi: {ssid}"
+        return "No Wifi"
+
+    def get_wifi_ssid(self):
+        try:
+            wlan = network.WLAN(network.STA_IF)
+            if wlan.isconnected():
+                # In MicroPython geeft config('essid') de verbonden SSID terug
+                ssid = wlan.config('essid')
+                ip = wlan.ifconfig()[0]                
+                if ssid and ip:
+                    return f"{ssid} {ip}"
+        except Exception as e:
+            print("Fout bij ophalen SSID via network module:", e)
+            
         return "No Wifi"
     
     def onCreate(self):
