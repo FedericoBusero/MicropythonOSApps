@@ -20,6 +20,51 @@ JOYSTICK_RECTANGLE_WIDTH = const(80)
 JOYSTICK_RECTANGLE_HEIGHT = const(80)
 JOYSTICK_CIRCLE_RADIUS = const(30)
 
+def map_joystick(x, in_min, in_max, out_min, out_max, center=50, border=50):
+    """
+    Mapt een joystickwaarde met deadzones voor het midden en de randen.
+    
+    :param x: De gemeten inputwaarde
+    :param in_min: Minimale verwachte input (bijv. 0)
+    :param in_max: Maximale verwachte input (bijv. 4095)
+    :param out_min: Gewenste minimale output (bijv. -100 of 0)
+    :param out_max: Gewenste maximale output (bijv. 100 of 1023)
+    :param center: Marge rond het midden die exact naar het gemiddelde wordt afgerond
+    :param border: Marge aan de uiterste randen die vastpinnen op out_min / out_max
+    """
+    in_center = (in_min + in_max) / 2.0
+    out_center = (out_min + out_max) / 2.0
+    
+    # 1. Begrens de input binnen in_min en in_max
+    x = max(in_min, min(x, in_max))
+    
+    # 2. Border check (uiterste waarden vastpinnen)
+    if x <= (in_min + border):
+        return out_min
+    if x >= (in_max - border):
+        return out_max
+        
+    # 3. Center check (middenzone vastpinnen op het gemiddelde)
+    if abs(x - in_center) <= center:
+        return out_center
+        
+    # 4. Schalen buiten de center zone
+    if x < in_center:
+        # Onderste helft mappen (van in_min + border TOT in_center - center)
+        src_min = in_min + border
+        src_max = in_center - center
+        dst_min = out_min
+        dst_max = out_center
+    else:
+        # Bovenste helft mappen (van in_center + center TOT in_max - border)
+        src_min = in_center + center
+        src_max = in_max - border
+        dst_min = out_center
+        dst_max = out_max
+        
+    # Standaard lineaire schaling binnen het actieve bereik
+    return dst_min + (x - src_min) * (dst_max - dst_min) / (src_max - src_min)
+
 class RemoteControl(Activity):
 
     refresh_joystick_timer = None
@@ -141,8 +186,10 @@ class RemoteControl(Activity):
             self.circ_area.set_pos(x_pos + int(JOYSTICK_CIRCLE_RADIUS/2), y_pos + int(JOYSTICK_CIRCLE_RADIUS/2))
 
         # Map de ADC waarden naar het bereik -180 tot 180 voor de WebSocket
-        self.joy_x = lv.map(raw_x, 0, 4095, -180, 180)
-        self.joy_y = lv.map(raw_y, 4095, 0, -180, 180)
+        # self.joy_x = lv.map(raw_x, 0, 4095, -180, 180)
+        # self.joy_y = lv.map(raw_y, 4095, 0, -180, 180)
+        self.joy_x = map_joystick(raw_x, 0, 4095, -180, 180, 100, 100)
+        self.joy_y = map_joystick(raw_y, 0, 4095, -180, 180, 100, 100)
 
     def refresh_wifi(self, timer):
         if self.wifi_label:
