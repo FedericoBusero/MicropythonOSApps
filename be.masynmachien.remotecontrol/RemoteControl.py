@@ -219,10 +219,60 @@ class RemoteControl(Activity):
         self.joy_x = map_joystick(raw_x, 0, 4095, -180, 180, dead_center, dead_border)
         self.joy_y = map_joystick(raw_y, 4095, 0, -180, 180, dead_center, dead_border)
 
-    def refresh_wifi(self, timer):
-        if self.wifi_label:
-            self.wifi_label.set_text(self.get_wifi_ssid())
+#    def refresh_wifi(self, timer):
+#        if self.wifi_label:
+#            self.wifi_label.set_text(self.get_wifi_ssid())
+
+    def reconnect_wifi(self):
+        """Koppelt de Wi-Fi los, reset de interface en probeert opnieuw te verbinden."""
+        # See https://github.com/MicroPythonOS/MicroPythonOS/issues/220
+        try:
+            print("[Wi-Fi] Gateway is niet 192.168.4.1. Wi-Fi herstarten...")
+            wlan = network.WLAN(network.STA_IF)
             
+            if wlan.isconnected():
+                wlan.disconnect()
+            asyncio.sleep(0.5)
+            
+            wlan.active(False)
+            asyncio.sleep(0.5)
+            
+            wlan.active(True)
+            
+            wlan.connect()
+            print("[Wi-Fi] Reconnect commando verzonden.")
+            
+        except Exception as e:
+            print("[Wi-Fi] Fout bij herverbinden Wi-Fi:", e)
+
+    def refresh_wifi(self, timer):
+        try:
+            wlan = network.WLAN(network.STA_IF)
+            if wlan.isconnected():
+                # wlan.ifconfig() geeft: (ip, subnet, gateway, dns)
+                config = wlan.ifconfig()
+                gateway_ip = config[2]
+                
+                # Controleer of het gateway IP overeenkomt
+                if gateway_ip != "192.168.4.1":
+                    if self.wifi_label:
+                        self.wifi_label.set_text("Wrong Wifi gateway - retrying ...")
+                    self.reconnect_wifi()
+                else:
+                    # Wi-Fi is correct verbonden met gateway 192.168.4.1
+                    ssid = wlan.config('essid')
+                    if self.wifi_label:
+                        self.wifi_label.set_text(f"{ssid} {gateway_ip}")
+            else:
+                if self.wifi_label:
+                    self.wifi_label.set_text("No Wifi")
+                    
+        except Exception as e:
+            print("Fout in refresh_wifi:", e)
+            if self.wifi_label:
+                self.wifi_label.set_text("Wifi Error")
+
+    
     def on_slider_change(self, event):
         if self.slider1_label:
             self.slider1_label.set_text(f"Waarde: {self.slider1.get_value()}")
@@ -312,6 +362,13 @@ class RemoteControl(Activity):
                         receiver = asyncio.create_task(self.receive_loop(ws))
                         
                         await asyncio.gather(ping_sender, joy_sender, receiver)
+                        #done, pending = await asyncio.wait(
+                        #    [ping_sender, joy_sender, receiver],
+                        #    return_when=asyncio.FIRST_COMPLETED
+                        #)
+                        # Annuleer de resterende taken direct
+                        #for task in pending:
+                        #    task.cancel()
 
             except asyncio.CancelledError:
                 print("WebSocket main task gracefully cancelled.")
