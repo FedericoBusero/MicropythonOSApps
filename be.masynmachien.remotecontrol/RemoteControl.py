@@ -6,6 +6,7 @@ from mpos import WifiService, DeviceInfo
 import asyncio
 import aiohttp
 import network
+import time
 
 hardware_id = DeviceInfo.get_hardware_id()
 if hardware_id == "fri3d_2024":
@@ -232,10 +233,10 @@ class RemoteControl(Activity):
             
             if wlan.isconnected():
                 wlan.disconnect()
-            asyncio.sleep(0.5)
+            time.sleep(0.5)
             
             wlan.active(False)
-            asyncio.sleep(0.5)
+            time.sleep(0.5)
             
             wlan.active(True)
             
@@ -307,13 +308,17 @@ class RemoteControl(Activity):
             await ws.close()
 
     async def send_joystick_loop(self, ws):
-        """Sends live joystick coordinates to the WebSocket server."""
+        """Sends live joystick coordinates to the WebSocket server if they have changed."""
+        last_sent = None
         try:
             while True:
-                msg = f"1:{self.joy_x},{self.joy_y}"
-                # print(f"--> Sending joystick: {msg}")
-                await ws.send_str(msg)
-                await asyncio.sleep(0.160)  # Send every 160ms
+                current_coords = (self.joy_x, self.joy_y)
+                if current_coords != last_sent:
+                    msg = f"1:{self.joy_x},{self.joy_y}"
+                    # print(f"--> Sending joystick: {msg}")
+                    await ws.send_str(msg)
+                    last_sent = current_coords
+                await asyncio.sleep(0.080)  # Check every 80ms
         except (asyncio.CancelledError, OSError):
             raise
         except Exception as e:
