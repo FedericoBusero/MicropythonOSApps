@@ -1,4 +1,4 @@
-# Joystick2026.py
+# joystick2026.py
 import mpos
 
 class Joystick:
