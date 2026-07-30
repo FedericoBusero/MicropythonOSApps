@@ -1,0 +1,21 @@
+{
+  "name": "RemoteControl",
+  "publisher": "FedericoBusero",
+  "short_description": "Bestuur blimps, hovercraft, rc car enz over Wifi",
+  "long_description": "Bestuur blimps, hovercraft, rc car enz over Wifi",
+  "fullname": "be.masynmachien.remotecontrol2",
+  "version": "0.1.0",
+  "category": "Communication",
+  "activities": [
+    {
+      "entrypoint": "remote_control.py",
+      "classname": "RemoteControl",
+      "intent_filters": [
+        {
+          "action": "main",
+          "category": "launcher"
+        }
+      ]
+    }
+  ]
+}
