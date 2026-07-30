@@ -6,7 +6,6 @@ A remote control application designed for the **Fri3d Badge 2024 & 2026**. This 
 
 **Author:** FedericoBusero  
 **Source Repositories:**
-- [MicroPython OS App Source](https://github.com/FedericoBusero/MicropythonOSApps/tree/main/be.masynmachien.remotecontrol)
 - [Wifi Blimp Source](https://github.com/FedericoBusero/Wifi-Blimp-Browser)
 - [Wifi Hovercraft Source](https://github.com/FedericoBusero/Wifi-Hovercraft-Browser/)
 
