@@ -3,7 +3,7 @@
 # It works with devices used in MasynMachien workshops such as hovercrafts and blimps. 
 # Author: FedericoBusero
 
-# Source of the app: https://github.com/FedericoBusero/MicropythonOSApps/tree/main/be.masynmachien.remotecontrol
+# Source of the app: https://github.com/FedericoBusero/MicropythonOSApps/tree/main/be.masynmachien.remotecontrol2
 #   Blimp source: https://github.com/FedericoBusero/Wifi-Blimp-Browser
 #   Hovercraft source: https://github.com/FedericoBusero/Wifi-Hovercraft-Browser/
 
