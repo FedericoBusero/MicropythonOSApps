@@ -1,4 +1,4 @@
-# Buttons2024.py
+# buttons2024.py
 from mpos.board.fri3d_2024 import (
     btn_a,
     btn_b,
