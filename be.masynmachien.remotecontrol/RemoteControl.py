@@ -1,3 +1,25 @@
+# Software developed for Fri3d badge 2024 and 2026
+# You can control external devices with a joystick & slider using websockets on wifi. So the device should run a SoftAP and Websocket server
+# It works with devices used in MasynMachien workshops such as hovercrafts and blimps. 
+# Author: FedericoBusero
+
+# Source of the app: https://github.com/FedericoBusero/MicropythonOSApps/tree/main/be.masynmachien.remotecontrol
+#   Blimp source: https://github.com/FedericoBusero/Wifi-Blimp-Browser
+#   Hovercraft source: https://github.com/FedericoBusero/Wifi-Hovercraft-Browser/
+
+# How to use: 
+# - Connect to the Wifi network of the SoftAP using the Wifi app
+# - Move the joystick circle by using the physical joystick
+# - Move the slider using the buttons Y and B, reset to default bij pressing button A
+
+# This application-level protocol runs over a standard WebSocket connection (ws://192.168.4.1:82/). 
+# It enables real-time, bi-directional communication between the controller device (badge) and the WebSocket server.
+# Messages it sends:
+# - every second it sends ping message "0"
+# - every 80 ms, when the joystick has moved, it sends the joystick coordinates in the range -180 .. 180 in the format "1:x,y" e.g. "1:180,45"
+# - every 160 ms, when the slider has moved, it sends the slider position in the range 0 .. 360 where 180 is the default center position in the format "2:v" e.g. "2:180"
+# Text messages it receives are displayed on the status bar
+
 import logging
 from mpos import Activity
 import lvgl as lv
@@ -8,7 +30,6 @@ import aiohttp
 import network
 import time
 
-#Source: https://github.com/FedericoBusero/MicropythonOSApps/tree/main/be.masynmachien.remotecontrol
 
 hardware_id = DeviceInfo.get_hardware_id()
 if hardware_id == "fri3d_2024":
