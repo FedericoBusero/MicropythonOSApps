@@ -144,6 +144,8 @@ class RemoteControl(Activity):
         self.slider1.set_range(0, 360)
         self.slider1.set_value(180, False)
         self.slider1.align(lv.ALIGN.TOP_LEFT, 30, 70)
+        # self.slider1.set_size(160, 20)  
+        self.slider1.set_style_pad_all(10, lv.PART.KNOB)        
         self.slider1.set_style_bg_color(lv.color_hex(0x00FF00), lv.PART.KNOB)
         self.slider1.add_event_cb(self.compensate_joystick_cb, lv.EVENT.KEY, None)
         # self.slider1.add_event_cb(self.on_slider_change, lv.EVENT.VALUE_CHANGED, None)
