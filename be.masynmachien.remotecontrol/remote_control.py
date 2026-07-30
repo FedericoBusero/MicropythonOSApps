@@ -34,12 +34,12 @@ import time
 hardware_id = DeviceInfo.get_hardware_id()
 if hardware_id == "fri3d_2024":
     # Fri3d badge 2024
-    from Buttons2024 import buttons
-    from Joystick2024 import joystick
+    from buttons2024 import buttons
+    from joystick2024 import joystick
 else:
     # Fri3d badge 2026
-    from Joystick2026 import joystick
-    from Buttons2026 import buttons
+    from joystick2026 import joystick
+    from buttons2026 import buttons
 
 JOYSTICK_RECTANGLE_WIDTH = 100
 JOYSTICK_RECTANGLE_HEIGHT = 100
