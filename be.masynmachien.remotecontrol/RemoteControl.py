@@ -111,7 +111,7 @@ class RemoteControl(Activity):
         return "No Wifi"
     
     def onCreate(self):
-        print("onCreate RemoteControl")
+        # print("onCreate RemoteControl")
         screen = lv.obj()
         self.status_label = lv.label(screen)
         self.status_label.set_style_text_font(lv.font_montserrat_16, lv.PART.MAIN)
@@ -158,7 +158,7 @@ class RemoteControl(Activity):
         self.setContentView(screen)
 
     def onStart(self, screen):
-        print("starting joystick refresh_timer")
+        # print("starting joystick refresh_timer")
         self.refresh_joystick_timer = lv.timer_create(self.refresh_joystick, 80, None)
         self.refresh_slider_timer = lv.timer_create(self.refresh_slider, 160, None)
         self.refresh_wifi_timer = lv.timer_create(self.refresh_wifi, 10000, None)
@@ -167,30 +167,30 @@ class RemoteControl(Activity):
         # Silence the MPOS focus_direction logger while this screen is active (joystick events)
         logging.getLogger("mpos.ui.focus_direction").setLevel(logging.ERROR)
         
-        print("start websocket program started")
+        # print("start websocket program started")
         # Maak een achtergrondtaak aan op de reeds draaiende asyncio loop
         loop = asyncio.get_event_loop()
         self.ws_task = loop.create_task(self.main_websocket())
 
     def onStop(self, screen):
         if self.refresh_joystick_timer:
-            print("stopping joystick refresh_timer")
+            # print("stopping joystick refresh_timer")
             self.refresh_joystick_timer.delete()
             
         if self.refresh_slider_timer:
-            print("stopping slider refresh_timer")
+            # print("stopping slider refresh_timer")
             self.refresh_slider_timer.delete()
         if self.refresh_wifi_timer:
-            print("stopping wifi refresh_timer")
+            # print("stopping wifi refresh_timer")
             self.refresh_wifi_timer.delete()
 
         if self.refresh_button_timer:
-            print("stopping button refresh_timer")
+            # print("stopping button refresh_timer")
             self.refresh_button_timer.delete()
 
         # Stop de websocket taak als deze nog draait
         if self.ws_task:
-            print("stopping websocket task")
+            # print("stopping websocket task")
             self.ws_task.cancel()
             self.ws_task = None
             
@@ -313,7 +313,7 @@ class RemoteControl(Activity):
         try:
             while True:
                 msg = "0"
-                print(f"--> Sending ping: {msg}")
+                # print(f"--> Sending ping: {msg}")
                 await ws.send_str(msg)
                 await asyncio.sleep(1)  # Send every second
         except (asyncio.CancelledError, OSError):
@@ -363,7 +363,7 @@ class RemoteControl(Activity):
         try:
             async for msg in ws:
                 if msg.type == aiohttp.WSMsgType.TEXT:
-                    print(f"<-- Received: {msg.data}")
+                    # print(f"<-- Received: {msg.data}")
                     if self.status_label:
                         self.status_label.set_text(msg.data)
                 elif msg.type in (aiohttp.WSMsgType.CLOSED, aiohttp.WSMsgType.ERROR):
@@ -386,13 +386,13 @@ class RemoteControl(Activity):
             receiver = None
             
             try:
-                print(f"Connecting to {url}...")
+                # print(f"Connecting to {url}...")
                 if self.status_label:
                     self.status_label.set_text("Connecting...")
 
                 async with aiohttp.ClientSession() as session:
                     async with session.ws_connect(url) as ws:
-                        print("Connected to 192.168.4.1:82!")
+                        # print("Connected to 192.168.4.1:82!")
                         if self.status_label:
                             self.status_label.set_text("Connected")
                         
@@ -411,7 +411,7 @@ class RemoteControl(Activity):
                         #    task.cancel()
 
             except asyncio.CancelledError:
-                print("WebSocket main task gracefully cancelled.")
+                # print("WebSocket main task gracefully cancelled.")
                 break  # Stop de loop definitief wanneer de activiteit stopt (onStop)
 
             except (OSError, Exception) as e:
