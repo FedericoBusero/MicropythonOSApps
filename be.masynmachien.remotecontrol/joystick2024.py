@@ -1,4 +1,4 @@
-# Joystick2024.py
+# joystick2024.py
 from mpos.board.fri3d_2024 import adc_up_down, adc_left_right
 
 class Joystick:
