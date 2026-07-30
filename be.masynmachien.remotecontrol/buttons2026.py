@@ -1,4 +1,4 @@
-# Buttons2026.py
+# buttons2026.py
 import mpos
 
 class Buttons:
