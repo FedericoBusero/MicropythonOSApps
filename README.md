@@ -18,7 +18,7 @@ A remote control application designed for the **Fri3d Badge 2024 & 2026**. This 
 3. **Adjust Slider / Trim:**
    - Press **Y** to increase the slider value.
    - Press **B** to decrease the slider value.
-   - Press **A** to reset the slider to its default center value (`180`).
+   - Press **A** to reset the slider to its default center value.
 4. **Status Display:** Incoming text messages from the target device are displayed directly on the top status bar.
 
 ---
@@ -38,7 +38,6 @@ The badge connects to the target device's WebSocket server at `ws://192.168.4.1:
 
 ## 🛠 Supported Hardware
 
-- **Fri3d Badge 2024:** Uses direct ADC hardware pins for analog joystick readings and standard GPIO buttons.
-- **Fri3d Badge 2026:** Communicates via I2C with the onboard CH32 coprocessor for button and analog joystick input.
+- Fri3d Badge 2024
+- Fri3d Badge 2026
 
-*The hardware version is automatically detected at startup.*
