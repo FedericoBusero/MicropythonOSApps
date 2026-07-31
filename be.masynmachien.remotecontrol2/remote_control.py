@@ -252,8 +252,8 @@ class RemoteControl(Activity):
 
     def onStart(self, screen):
         # print("starting joystick refresh_timer")
-        self.refresh_joystick_timer = lv.timer_create(self.refresh_joystick, 80, None)
-        self.refresh_slider_timer = lv.timer_create(self.refresh_slider, 160, None)
+        self.refresh_joystick_timer = lv.timer_create(self.refresh_joystick, 20, None)
+        self.refresh_slider_timer = lv.timer_create(self.refresh_slider, 10, None)
         self.refresh_wifi_timer = lv.timer_create(self.refresh_wifi, 10000, None)
         self.refresh_button_timer = lv.timer_create(self.refresh_buttons, 80, None)
         
