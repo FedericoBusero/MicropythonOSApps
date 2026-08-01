@@ -1,5 +1,5 @@
 # Software developed for Fri3d badge 2024 and 2026
-# You can control external devices with a joystick & slider using websockets on wifi. So the device should run a SoftAP and Websocket server
+# You can control external devices with a joystick & 2 sliders using websockets on wifi. So the device should run a SoftAP and Websocket server
 # It works with devices used in MasynMachien workshops such as hovercrafts and blimps. 
 # Author: FedericoBusero
 
@@ -10,14 +10,16 @@
 # How to use: 
 # - Connect to the Wifi network of the SoftAP using the Wifi app
 # - Move the joystick circle by using the physical joystick
-# - Move the slider using the buttons Y and B, reset to default bij pressing button A
+# - Move the first slider by holding the start button and simultaniously using the buttons Y and B
+# - Move the second slider using the buttons Y and B, reset to default bij pressing button A
 
 # This application-level protocol runs over a standard WebSocket connection (ws://192.168.4.1:82/). 
 # It enables real-time, bi-directional communication between the controller device (badge) and the WebSocket server.
 # Messages it sends:
 # - every second it sends ping message "0"
 # - every 80 ms, when the joystick has moved, it sends the joystick coordinates in the range -180 .. 180 in the format "1:x,y" e.g. "1:180,45"
-# - every 160 ms, when the slider has moved, it sends the slider position in the range 0 .. 360 where 180 is the default center position in the format "2:v" e.g. "2:180"
+# - every 80 ms, when the first slider has moved, it sends the slider position in the range -180 .. 180 where 0 is the default center position in the format "3:v" e.g. "2:17"
+# - every 80 ms, when the second slider has moved, it sends the slider position in the range 0 .. 360 where 180 is the default center position in the format "2:v" e.g. "2:180"
 # Text messages it receives are displayed on the status bar
 
 import logging
@@ -37,6 +39,7 @@ if hardware_id == "fri3d_2024":
         btn_a,
         btn_b,
         btn_menu,
+        btn_start,
         btn_x,
         btn_y,
         adc_up_down, 
@@ -60,6 +63,9 @@ if hardware_id == "fri3d_2024":
     
         def get_button_menu_value(self):
             return btn_menu.value()
+
+        def get_button_start_value(self):
+            return btn_start.value()
   
     class Joystick:
         """Hardware-abstractie voor de analoge joystick van de Fri3d Badge 2024."""
@@ -95,6 +101,8 @@ else:
         def get_button_menu_value(self):
             return 0 if mpos.io_expander.button_menu else 1
         
+        def get_button_start_value(self):
+            return 0 if mpos.io_expander.button_start else 1
     
     class Joystick:
         """Hardware-abstractie voor de I2C joystick via de CH32 coprocessor op de Fri3d Badge 2026."""
@@ -181,7 +189,8 @@ class RemoteControl(Activity):
     joy_x = 0
     joy_y = 0
 
-    slider_val = 180
+    slider1_val = 0
+    slider2_val = 180
 
     def get_wifi_ssid2(self):
         ssid = WifiService.get_current_ssid()
@@ -225,7 +234,7 @@ class RemoteControl(Activity):
         self.rect.set_style_border_color(lv.color_hex(0x00FF00), lv.PART.MAIN)
         self.rect.set_style_border_width(1, lv.PART.MAIN)
         self.rect.remove_flag(lv.obj.FLAG.SCROLLABLE)
-        self.rect.align(lv.ALIGN.TOP_MID, 0, 120)
+        self.rect.align(lv.ALIGN.TOP_MID, 0, 130)
 
         self.circ_area = lv.obj(self.rect)
         self.circ_area.set_size(JOYSTICK_CIRCLE_RADIUS, JOYSTICK_CIRCLE_RADIUS)
@@ -234,13 +243,22 @@ class RemoteControl(Activity):
         self.circ_area.set_style_border_width(0, lv.PART.MAIN)
         
         self.slider1 = lv.slider(screen)
-        self.slider1.set_range(0, 360)
-        self.slider1.set_value(180, False)
-        self.slider1.align(lv.ALIGN.TOP_LEFT, 30, 70)
+        self.slider1.set_range(-180, 180)
+        self.slider1.set_value(0, False)
+        self.slider1.align(lv.ALIGN.TOP_LEFT, 30, 65)
         # self.slider1.set_size(160, 20)  
         self.slider1.set_style_pad_all(10, lv.PART.KNOB)        
         self.slider1.set_style_bg_color(lv.color_hex(0x00FF00), lv.PART.KNOB)
-        self.slider1.add_event_cb(self.compensate_joystick_cb, lv.EVENT.KEY, None)
+        self.slider1.add_event_cb(self.compensate_joystick_cb_slider1, lv.EVENT.KEY, None)
+        
+        self.slider2 = lv.slider(screen)
+        self.slider2.set_range(0, 360)
+        self.slider2.set_value(180, False)
+        self.slider2.align(lv.ALIGN.TOP_LEFT, 30, 100)
+        # self.slider2.set_size(160, 20)  
+        self.slider2.set_style_pad_all(10, lv.PART.KNOB)        
+        self.slider2.set_style_bg_color(lv.color_hex(0x00FF00), lv.PART.KNOB)
+        self.slider2.add_event_cb(self.compensate_joystick_cb_slider2, lv.EVENT.KEY, None)
         
         self.setContentView(screen)
 
@@ -286,18 +304,25 @@ class RemoteControl(Activity):
 
     def refresh_buttons(self, timer):
         if buttons.get_button_y_value() == 0:
-            current_value = self.slider1.get_value()
-            new_value = min(1000, current_value + 10)
-            self.slider1.set_value(new_value, False)
-            # self.on_slider_change(None)
+            if buttons.get_button_start_value() == 0:
+                current_value = self.slider1.get_value()
+                new_value = min(1000, current_value + 10)
+                self.slider1.set_value(new_value, False)
+            else:
+                current_value = self.slider2.get_value()
+                new_value = min(1000, current_value + 10)
+                self.slider2.set_value(new_value, False)
         if buttons.get_button_b_value() == 0:
-            current_value = self.slider1.get_value()
-            new_value = max(-1000, current_value - 10)
-            self.slider1.set_value(new_value, False)
-            # self.on_slider_change(None)
+            if buttons.get_button_start_value() == 0:
+                current_value = self.slider1.get_value()
+                new_value = max(-1000, current_value - 10)
+                self.slider1.set_value(new_value, False)
+            else:
+                current_value = self.slider2.get_value()
+                new_value = max(-1000, current_value - 10)
+                self.slider2.set_value(new_value, False)
         if buttons.get_button_a_value() == 0:
-            self.slider1.set_value(180, False)
-            # self.on_slider_change(None)
+            self.slider2.set_value(180, False)
 
     def refresh_joystick(self, timer):
         raw_x, raw_y = joystick.read_raw()
@@ -346,7 +371,9 @@ class RemoteControl(Activity):
 
     def refresh_slider(self, timer):
         if self.slider1:
-            self.slider_val = int(self.slider1.get_value())
+            self.slider1_val = int(self.slider1.get_value())
+        if self.slider2:
+            self.slider2_val = int(self.slider2.get_value())
             
     def refresh_wifi(self, timer):
         try:
@@ -374,9 +401,8 @@ class RemoteControl(Activity):
             print("Fout in refresh_wifi:", e)
             if self.wifi_label:
                 self.wifi_label.set_text("Wifi Error")
-
     
-    def compensate_joystick_cb(self, e):
+    def compensate_joystick_cb_slider1(self, e):
         if e.get_code() == lv.EVENT.KEY:
             key = e.get_key()
             slider_obj = self.slider1
@@ -386,11 +412,23 @@ class RemoteControl(Activity):
             # doen we net omgekeerde om waarde weer goed te krijgen
             if key in (lv.KEY.RIGHT, lv.KEY.UP):
                 slider_obj.set_value(current_val - 1, None)
-                # self.on_slider_change(None)
             elif key in (lv.KEY.LEFT, lv.KEY.DOWN):
                 slider_obj.set_value(current_val + 1, None)
-                # self.on_slider_change(None)
 
+    def compensate_joystick_cb_slider2(self, e):
+        if e.get_code() == lv.EVENT.KEY:
+            key = e.get_key()
+            slider_obj = self.slider2
+            current_val = slider_obj.get_value()
+            
+            # Als de joystick RIGHT/UP/LEFT/DOWN key event geeft, wordt de waarde aangepast +/- 1, dan
+            # doen we net omgekeerde om waarde weer goed te krijgen
+            if key in (lv.KEY.RIGHT, lv.KEY.UP):
+                slider_obj.set_value(current_val - 1, None)
+            elif key in (lv.KEY.LEFT, lv.KEY.DOWN):
+                slider_obj.set_value(current_val + 1, None)
+
+    
     async def send_ping_loop(self, ws):
         """Sends periodic ping data to the WebSocket server."""
         try:
@@ -423,24 +461,42 @@ class RemoteControl(Activity):
             print(f"Joystick loop error: {e}", flush=True)
             await ws.close()
             
-    async def send_slider_loop(self, ws):
+    async def send_slider1_loop(self, ws):
         """Sends live slider values to the WebSocket server if they have changed."""
         last_sent = None
         try:
             while True:
-                current_val = self.slider_val
+                current_val = self.slider1_val
                 if current_val != last_sent:
-                    msg = f"2:{current_val}"
+                    msg = f"3:{current_val}"
                     # print(f"--> Sending slider: {msg}")
                     await ws.send_str(msg)
                     last_sent = current_val
-                await asyncio.sleep(0.160)  # Check elke 160ms
+                await asyncio.sleep(0.080)  # Check elke 80ms
         except (asyncio.CancelledError, OSError):
             raise
         except Exception as e:
             print(f"Slider loop error: {e}", flush=True)
             await ws.close()
 
+    async def send_slider2_loop(self, ws):
+        """Sends live slider values to the WebSocket server if they have changed."""
+        last_sent = None
+        try:
+            while True:
+                current_val = self.slider2_val
+                if current_val != last_sent:
+                    msg = f"2:{current_val}"
+                    # print(f"--> Sending slider: {msg}")
+                    await ws.send_str(msg)
+                    last_sent = current_val
+                await asyncio.sleep(0.080)  # Check elke 80ms
+        except (asyncio.CancelledError, OSError):
+            raise
+        except Exception as e:
+            print(f"Slider loop error: {e}", flush=True)
+            await ws.close()
+            
     async def receive_loop(self, ws):
         """Listens for incoming messages from the server."""
         try:
@@ -465,7 +521,8 @@ class RemoteControl(Activity):
         while True:
             ping_sender = None
             joy_sender = None
-            slider_sender = None
+            slider1_sender = None
+            slider2_sender = None
             receiver = None
             
             try:
@@ -481,12 +538,13 @@ class RemoteControl(Activity):
                         
                         ping_sender = asyncio.create_task(self.send_ping_loop(ws))
                         joy_sender = asyncio.create_task(self.send_joystick_loop(ws))
-                        slider_sender = asyncio.create_task(self.send_slider_loop(ws))
+                        slider1_sender = asyncio.create_task(self.send_slider1_loop(ws))
+                        slider2_sender = asyncio.create_task(self.send_slider2_loop(ws))
                         receiver = asyncio.create_task(self.receive_loop(ws))
                         
-                        await asyncio.gather(ping_sender, joy_sender, slider_sender, receiver)
+                        await asyncio.gather(ping_sender, joy_sender, slider1_sender, slider2_sender, receiver)
                         #done, pending = await asyncio.wait(
-                        #    [ping_sender, joy_sender, slider_sender, receiver],
+                        #    [ping_sender, joy_sender, slider1_sender, slider2_sender, receiver],
                         #    return_when=asyncio.FIRST_COMPLETED
                         #)
                         # Annuleer de resterende taken direct
@@ -508,8 +566,10 @@ class RemoteControl(Activity):
                     ping_sender.cancel()
                 if joy_sender:
                     joy_sender.cancel()
-                if slider_sender:
-                    slider_sender.cancel()
+                if slider1_sender:
+                    slider1_sender.cancel()
+                if slider2_sender:
+                    slider2_sender.cancel()
                 if receiver:
                     receiver.cancel()
 
