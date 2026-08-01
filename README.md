@@ -15,7 +15,10 @@ A remote control application designed for the **Fri3d Badge 2024 & 2026**. This 
 
 1. **Connect Wi-Fi:** Open the Wi-Fi app on your Fri3d Badge and connect to your target device's Wi-Fi Access Point (`SoftAP`).
 2. **Control Movement:** Use the physical **joystick** to control direction and speed.
-3. **Adjust Slider / Trim:**
+3. **Adjust first slider:**
+   - Hold **START** and Press **Y** to increase the slider value.
+   - Hold **START** and Press **B** to decrease the slider value.
+3. **Adjust second slider:**
    - Press **Y** to increase the slider value.
    - Press **B** to decrease the slider value.
    - Press **A** to reset the slider to its default center value.
@@ -31,7 +34,8 @@ The badge connects to the target device's WebSocket server at `ws://192.168.4.1:
 | :--- | :--- | :--- | :--- |
 | **Heartbeat** | Every 1 sec | `0` | Keeps the connection active |
 | **Joystick** | Every 80 ms | `1:x,y` | Transmits coordinates (`-180` to `180`). Example: `1:180,45` |
-| **Slider** | Every 160 ms | `2:v` | Transmits position (`0` to `360`, default `180`). Example: `2:180` |
+| **Slider1** | Every 80 ms | `3:v` | Transmits position (`-180` to `180`, default `0`). Example: `3:180` |
+| **Slider2** | Every 80 ms | `2:v` | Transmits position (`0` to `360`, default `180`). Example: `2:180` |
 | **Incoming** | As received | Text string | Displays incoming device notifications on the screen status bar |
 
 ---
