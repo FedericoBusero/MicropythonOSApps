@@ -241,13 +241,7 @@ class RemoteControl(Activity):
         self.slider1.set_style_pad_all(10, lv.PART.KNOB)        
         self.slider1.set_style_bg_color(lv.color_hex(0x00FF00), lv.PART.KNOB)
         self.slider1.add_event_cb(self.compensate_joystick_cb, lv.EVENT.KEY, None)
-        # self.slider1.add_event_cb(self.on_slider_change, lv.EVENT.VALUE_CHANGED, None)
         
-        # Label om de slider waarde te tonen
-        # self.slider1_label = lv.label(screen)
-        # self.slider1_label.set_text("")
-        # self.slider1_label.align(lv.ALIGN.TOP_LEFT, 30, 90)
-
         self.setContentView(screen)
 
     def onStart(self, screen):
@@ -354,10 +348,6 @@ class RemoteControl(Activity):
         if self.slider1:
             self.slider_val = int(self.slider1.get_value())
             
-#    def on_slider_change(self, event):
-#        if self.slider1_label:
-#            self.slider1_label.set_text(f"Waarde: {self.slider1.get_value()}")
-
     def refresh_wifi(self, timer):
         try:
             wlan = network.WLAN(network.STA_IF)
