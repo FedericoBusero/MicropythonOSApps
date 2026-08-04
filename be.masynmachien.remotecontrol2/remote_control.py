@@ -203,7 +203,7 @@ class RemoteControl(Activity):
             wlan = network.WLAN(network.STA_IF)
             if wlan.isconnected():
                 # In MicroPython geeft config('essid') de verbonden SSID terug
-                ssid = wlan.config('essid')
+                ssid = WifiService.get_current_ssid()
                 ip = wlan.ifconfig()[2] # gateway IP adres
                 if ssid and ip:
                     return f"{ssid} {ip}"
