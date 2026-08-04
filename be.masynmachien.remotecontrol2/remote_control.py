@@ -121,9 +121,9 @@ else:
 buttons = Buttons()
     
 joystick = Joystick()
-JOYSTICK_RECTANGLE_WIDTH = 100
-JOYSTICK_RECTANGLE_HEIGHT = 100
-JOYSTICK_CIRCLE_RADIUS = 30
+JOYSTICK_RECTANGLE_WIDTH = const(100)
+JOYSTICK_RECTANGLE_HEIGHT = const(100)
+JOYSTICK_CIRCLE_RADIUS = const(30)
 
 def map_joystick(x, in_min, in_max, out_min, out_max, center=50, border=50):
     """
