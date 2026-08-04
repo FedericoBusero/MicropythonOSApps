@@ -204,7 +204,7 @@ class RemoteControl(Activity):
             if wlan.isconnected():
                 # In MicroPython geeft config('essid') de verbonden SSID terug
                 ssid = WifiService.get_current_ssid()
-                ip = wlan.ifconfig()[2] # gateway IP adres
+                ip = WifiService.get_ipv4_gateway()
                 if ssid and ip:
                     return f"{ssid} {ip}"
         except Exception as e:
@@ -358,9 +358,7 @@ class RemoteControl(Activity):
         try:
             wlan = network.WLAN(network.STA_IF)
             if wlan.isconnected():
-                # wlan.ifconfig() geeft: (ip, subnet, gateway, dns)
-                config = wlan.ifconfig()
-                gateway_ip = config[2]
+                gateway_ip = WifiService.get_ipv4_gateway()
                 
                 ssid = WifiService.get_current_ssid()
                 if self.wifi_label:
