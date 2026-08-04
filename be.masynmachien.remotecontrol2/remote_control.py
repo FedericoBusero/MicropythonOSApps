@@ -29,9 +29,7 @@ from mpos import WifiService, DeviceInfo
 
 import asyncio
 import aiohttp
-import network
 import time
-
 
 hardware_id = DeviceInfo.get_hardware_id()
 if hardware_id == "fri3d_2024":
