@@ -362,7 +362,7 @@ class RemoteControl(Activity):
                 config = wlan.ifconfig()
                 gateway_ip = config[2]
                 
-                ssid = wlan.config('essid')
+                ssid = WifiService.get_current_ssid()
                 if self.wifi_label:
                     self.wifi_label.set_text(f"{ssid} {gateway_ip}")
             else:
