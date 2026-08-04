@@ -347,27 +347,6 @@ class RemoteControl(Activity):
 #        if self.wifi_label:
 #            self.wifi_label.set_text(self.get_wifi_ssid())
 
-    def reconnect_wifi(self):
-        """Koppelt de Wi-Fi los, reset de interface en probeert opnieuw te verbinden."""
-        # See https://github.com/MicroPythonOS/MicroPythonOS/issues/220
-        try:
-            print("[Wi-Fi] Gateway is niet 192.168.4.1. Wi-Fi herstarten...")
-            wlan = network.WLAN(network.STA_IF)
-            
-            if wlan.isconnected():
-                wlan.disconnect()
-            time.sleep(0.5)
-            
-            wlan.active(False)
-            time.sleep(0.5)
-            
-            wlan.active(True)
-            
-            wlan.connect()
-            print("[Wi-Fi] Reconnect commando verzonden.")
-            
-        except Exception as e:
-            print("[Wi-Fi] Fout bij herverbinden Wi-Fi:", e)
 
     def refresh_slider(self, timer):
         if self.slider1:
@@ -383,16 +362,9 @@ class RemoteControl(Activity):
                 config = wlan.ifconfig()
                 gateway_ip = config[2]
                 
-                # Controleer of het gateway IP overeenkomt
-                if gateway_ip != "192.168.4.1":
-                    if self.wifi_label:
-                        self.wifi_label.set_text("Wrong Wifi gateway - retrying ...")
-                    self.reconnect_wifi()
-                else:
-                    # Wi-Fi is correct verbonden met gateway 192.168.4.1
-                    ssid = wlan.config('essid')
-                    if self.wifi_label:
-                        self.wifi_label.set_text(f"{ssid} {gateway_ip}")
+                ssid = wlan.config('essid')
+                if self.wifi_label:
+                    self.wifi_label.set_text(f"{ssid} {gateway_ip}")
             else:
                 if self.wifi_label:
                     self.wifi_label.set_text("No Wifi")
