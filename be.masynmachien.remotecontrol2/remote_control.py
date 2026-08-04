@@ -326,8 +326,8 @@ class RemoteControl(Activity):
 
     def refresh_joystick(self, timer):
         raw_x, raw_y = joystick.read_raw()
-        dead_center = 400
-        dead_border = 200
+        dead_center = const(400)
+        dead_border = const(200)
         
         # Map de analoge waarden naar schermcoördinaten voor het bolletje
         if self.circ_area:
