@@ -29,9 +29,7 @@ from mpos import WifiService, DeviceInfo
 
 import asyncio
 import aiohttp
-import network
 import time
-
 
 hardware_id = DeviceInfo.get_hardware_id()
 if hardware_id == "fri3d_2024":
@@ -192,26 +190,13 @@ class RemoteControl(Activity):
     slider1_val = 0
     slider2_val = 180
 
-    def get_wifi_ssid2(self):
+    def get_wifi_ssid_gateway(self):
         ssid = WifiService.get_current_ssid()
-        if ssid:
-            return f"Wi-Fi: {ssid}"
+        ip = WifiService.get_ipv4_gateway()
+        if ssid and ip:
+            return f"{ssid} {ip}"
         return "No Wifi"
 
-    def get_wifi_ssid(self):
-        try:
-            wlan = network.WLAN(network.STA_IF)
-            if wlan.isconnected():
-                # In MicroPython geeft config('essid') de verbonden SSID terug
-                ssid = wlan.config('essid')
-                ip = wlan.ifconfig()[2] # gateway IP adres
-                if ssid and ip:
-                    return f"{ssid} {ip}"
-        except Exception as e:
-            print("Fout bij ophalen SSID via network module:", e)
-            
-        return "No Wifi"
-    
     def onCreate(self):
         # print("onCreate RemoteControl")
         screen = lv.obj()
@@ -223,7 +208,7 @@ class RemoteControl(Activity):
         # SSID Label bovenaan het scherm
         self.wifi_label = lv.label(screen)
         self.wifi_label.set_style_text_font(lv.font_montserrat_16, lv.PART.MAIN)
-        self.wifi_label.set_text(self.get_wifi_ssid())
+        self.wifi_label.set_text(self.get_wifi_ssid_gateway())
         self.wifi_label.align(lv.ALIGN.TOP_MID, 0, 10)
         
         # Create a black rectangle with a green border
@@ -343,65 +328,16 @@ class RemoteControl(Activity):
         self.joy_x = map_joystick(raw_x, 0, 4095, -180, 180, dead_center, dead_border)
         self.joy_y = map_joystick(raw_y, 4095, 0, -180, 180, dead_center, dead_border)
 
-#    def refresh_wifi(self, timer):
-#        if self.wifi_label:
-#            self.wifi_label.set_text(self.get_wifi_ssid())
-
-    def reconnect_wifi(self):
-        """Koppelt de Wi-Fi los, reset de interface en probeert opnieuw te verbinden."""
-        # See https://github.com/MicroPythonOS/MicroPythonOS/issues/220
-        try:
-            print("[Wi-Fi] Gateway is niet 192.168.4.1. Wi-Fi herstarten...")
-            wlan = network.WLAN(network.STA_IF)
-            
-            if wlan.isconnected():
-                wlan.disconnect()
-            time.sleep(0.5)
-            
-            wlan.active(False)
-            time.sleep(0.5)
-            
-            wlan.active(True)
-            
-            wlan.connect()
-            print("[Wi-Fi] Reconnect commando verzonden.")
-            
-        except Exception as e:
-            print("[Wi-Fi] Fout bij herverbinden Wi-Fi:", e)
+    def refresh_wifi(self, timer):
+        if self.wifi_label:
+            self.wifi_label.set_text(self.get_wifi_ssid_gateway())
 
     def refresh_slider(self, timer):
         if self.slider1:
             self.slider1_val = int(self.slider1.get_value())
         if self.slider2:
             self.slider2_val = int(self.slider2.get_value())
-            
-    def refresh_wifi(self, timer):
-        try:
-            wlan = network.WLAN(network.STA_IF)
-            if wlan.isconnected():
-                # wlan.ifconfig() geeft: (ip, subnet, gateway, dns)
-                config = wlan.ifconfig()
-                gateway_ip = config[2]
-                
-                # Controleer of het gateway IP overeenkomt
-                if gateway_ip != "192.168.4.1":
-                    if self.wifi_label:
-                        self.wifi_label.set_text("Wrong Wifi gateway - retrying ...")
-                    self.reconnect_wifi()
-                else:
-                    # Wi-Fi is correct verbonden met gateway 192.168.4.1
-                    ssid = wlan.config('essid')
-                    if self.wifi_label:
-                        self.wifi_label.set_text(f"{ssid} {gateway_ip}")
-            else:
-                if self.wifi_label:
-                    self.wifi_label.set_text("No Wifi")
-                    
-        except Exception as e:
-            print("Fout in refresh_wifi:", e)
-            if self.wifi_label:
-                self.wifi_label.set_text("Wifi Error")
-    
+
     def compensate_joystick_cb_slider1(self, e):
         if e.get_code() == lv.EVENT.KEY:
             key = e.get_key()
