@@ -200,8 +200,7 @@ class RemoteControl(Activity):
 
     def get_wifi_ssid(self):
         try:
-            wlan = network.WLAN(network.STA_IF)
-            if wlan.isconnected():
+            if WifiService.is_connected():
                 # In MicroPython geeft config('essid') de verbonden SSID terug
                 ssid = WifiService.get_current_ssid()
                 ip = WifiService.get_ipv4_gateway()
@@ -347,7 +346,6 @@ class RemoteControl(Activity):
 #        if self.wifi_label:
 #            self.wifi_label.set_text(self.get_wifi_ssid())
 
-
     def refresh_slider(self, timer):
         if self.slider1:
             self.slider1_val = int(self.slider1.get_value())
@@ -356,10 +354,8 @@ class RemoteControl(Activity):
             
     def refresh_wifi(self, timer):
         try:
-            wlan = network.WLAN(network.STA_IF)
-            if wlan.isconnected():
+            if WifiService.is_connected():
                 gateway_ip = WifiService.get_ipv4_gateway()
-                
                 ssid = WifiService.get_current_ssid()
                 if self.wifi_label:
                     self.wifi_label.set_text(f"{ssid} {gateway_ip}")
