@@ -192,25 +192,13 @@ class RemoteControl(Activity):
     slider1_val = 0
     slider2_val = 180
 
-    def get_wifi_ssid2(self):
+    def get_wifi_ssid_gateway(self):
         ssid = WifiService.get_current_ssid()
-        if ssid:
-            return f"Wi-Fi: {ssid}"
+        ip = WifiService.get_ipv4_gateway()
+        if ssid and ip:
+            return f"{ssid} {ip}"
         return "No Wifi"
 
-    def get_wifi_ssid(self):
-        try:
-            if WifiService.is_connected():
-                # In MicroPython geeft config('essid') de verbonden SSID terug
-                ssid = WifiService.get_current_ssid()
-                ip = WifiService.get_ipv4_gateway()
-                if ssid and ip:
-                    return f"{ssid} {ip}"
-        except Exception as e:
-            print("Fout bij ophalen SSID via network module:", e)
-            
-        return "No Wifi"
-    
     def onCreate(self):
         # print("onCreate RemoteControl")
         screen = lv.obj()
@@ -222,7 +210,7 @@ class RemoteControl(Activity):
         # SSID Label bovenaan het scherm
         self.wifi_label = lv.label(screen)
         self.wifi_label.set_style_text_font(lv.font_montserrat_16, lv.PART.MAIN)
-        self.wifi_label.set_text(self.get_wifi_ssid())
+        self.wifi_label.set_text(self.get_wifi_ssid_gateway())
         self.wifi_label.align(lv.ALIGN.TOP_MID, 0, 10)
         
         # Create a black rectangle with a green border
@@ -342,32 +330,16 @@ class RemoteControl(Activity):
         self.joy_x = map_joystick(raw_x, 0, 4095, -180, 180, dead_center, dead_border)
         self.joy_y = map_joystick(raw_y, 4095, 0, -180, 180, dead_center, dead_border)
 
-#    def refresh_wifi(self, timer):
-#        if self.wifi_label:
-#            self.wifi_label.set_text(self.get_wifi_ssid())
+    def refresh_wifi(self, timer):
+        if self.wifi_label:
+            self.wifi_label.set_text(self.get_wifi_ssid_gateway())
 
     def refresh_slider(self, timer):
         if self.slider1:
             self.slider1_val = int(self.slider1.get_value())
         if self.slider2:
             self.slider2_val = int(self.slider2.get_value())
-            
-    def refresh_wifi(self, timer):
-        try:
-            if WifiService.is_connected():
-                gateway_ip = WifiService.get_ipv4_gateway()
-                ssid = WifiService.get_current_ssid()
-                if self.wifi_label:
-                    self.wifi_label.set_text(f"{ssid} {gateway_ip}")
-            else:
-                if self.wifi_label:
-                    self.wifi_label.set_text("No Wifi")
-                    
-        except Exception as e:
-            print("Fout in refresh_wifi:", e)
-            if self.wifi_label:
-                self.wifi_label.set_text("Wifi Error")
-    
+
     def compensate_joystick_cb_slider1(self, e):
         if e.get_code() == lv.EVENT.KEY:
             key = e.get_key()
