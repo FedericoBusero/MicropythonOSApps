@@ -79,6 +79,16 @@ if hardware_id == "fri3d_2024":
 else:
     # Fri3d badge 2026
     import mpos
+    from mpos.board.fri3d_2026 import (
+        btn_start, 
+        expander
+    )
+    
+    _IDX_BTN_MENU  = const(5)
+    _IDX_BTN_B     = const(6)
+    _IDX_BTN_A     = const(7)
+    _IDX_BTN_Y     = const(8)
+    _IDX_BTN_X     = const(9)
 
     class Buttons:
         """Hardware-abstractie voor de digitale knoppen via de CH32 coprocessor op de Fri3d Badge 2026.
@@ -87,22 +97,22 @@ else:
         """
     
         def get_button_a_value(self):
-            return 0 if mpos.io_expander.button_a else 1
+            return 0 if mpos.io_expander.digital[_IDX_BTN_A] else 1
     
         def get_button_b_value(self):
-            return 0 if mpos.io_expander.button_b else 1
+            return 0 if mpos.io_expander.digital[_IDX_BTN_B] else 1
     
         def get_button_x_value(self):
-            return 0 if mpos.io_expander.button_x else 1
+            return 0 if mpos.io_expander.digital[_IDX_BTN_X] else 1
     
         def get_button_y_value(self):
-            return 0 if mpos.io_expander.button_y else 1
+            return 0 if mpos.io_expander.digital[_IDX_BTN_Y] else 1
     
         def get_button_menu_value(self):
-            return 0 if mpos.io_expander.button_menu else 1
+            return 0 if mpos.io_expander.digital[_IDX_BTN_MENU] else 1
         
         def get_button_start_value(self):
-            return 0 if mpos.io_expander.button_start else 1
+            return btn_start.value()
     
     class Joystick:
         """Hardware-abstractie voor de I2C joystick via de CH32 coprocessor op de Fri3d Badge 2026."""
