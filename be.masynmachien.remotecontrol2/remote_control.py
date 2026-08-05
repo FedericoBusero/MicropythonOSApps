@@ -228,7 +228,7 @@ class RemoteControl(Activity):
         self.status_label = lv.label(screen)
         self.status_label.set_style_text_font(lv.font_montserrat_16, lv.PART.MAIN)
         self.status_label.set_text("Startup")
-        self.status_label.align(lv.ALIGN.TOP_LEFT, 30, 40)
+        self.status_label.align(lv.ALIGN.TOP_LEFT, 30, 35)
 
         # SSID Label bovenaan het scherm
         self.wifi_label = lv.label(screen)
