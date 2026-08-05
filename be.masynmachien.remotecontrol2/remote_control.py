@@ -244,7 +244,7 @@ class RemoteControl(Activity):
         self.rect.set_style_border_color(lv.color_hex(0x00FF00), lv.PART.MAIN)
         self.rect.set_style_border_width(1, lv.PART.MAIN)
         self.rect.remove_flag(lv.obj.FLAG.SCROLLABLE)
-        self.rect.align(lv.ALIGN.TOP_MID, 0, 130)
+        self.rect.align(lv.ALIGN.TOP_MID, 0, 138)
 
         self.circ_area = lv.obj(self.rect)
         self.circ_area.set_size(JOYSTICK_CIRCLE_RADIUS, JOYSTICK_CIRCLE_RADIUS)
@@ -264,7 +264,7 @@ class RemoteControl(Activity):
         self.slider2 = lv.slider(screen)
         self.slider2.set_range(0, 360)
         self.slider2.set_value(180, False)
-        self.slider2.align(lv.ALIGN.TOP_LEFT, 30, 100)
+        self.slider2.align(lv.ALIGN.TOP_LEFT, 30, 110)
         # self.slider2.set_size(160, 20)  
         self.slider2.set_style_pad_all(10, lv.PART.KNOB)        
         self.slider2.set_style_bg_color(lv.color_hex(0x00FF00), lv.PART.KNOB)
