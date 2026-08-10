@@ -59,7 +59,7 @@ class I2CScannerActivity(Activity):
 
         # 5. Hardware Acquisition via DeviceManager
         try:
-            self.i2c = DeviceManager.get_default_i2c()
+            self.i2c = DeviceManager.getBus(type="i2c")
             if self.i2c is None:
                 raise RuntimeError("I2C bus unavailable")
             
