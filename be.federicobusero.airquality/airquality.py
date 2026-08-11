@@ -3,8 +3,8 @@ import time
 from mpos import Activity, DeviceManager
 
 
-class SCD40:
-    """Driver for Sensirion SCD40 (CO2, Temp, Humidity) - I2C Addr: 0x62"""
+class SCD4x:
+    """Driver for Sensirion SCD40/SCD41 (CO2, Temp, Humidity) - I2C Addr: 0x62"""
     I2C_ADDR = 0x62
 
     def __init__(self, i2c):
@@ -14,7 +14,7 @@ class SCD40:
         try:
             self.i2c.writeto(self.I2C_ADDR, b'\x21\xb1')
         except Exception as e:
-            print("SCD40 start error:", e)
+            print("SCD40/SCD41 start error:", e)
 
     def read_measurement(self):
         try:
@@ -30,7 +30,7 @@ class SCD40:
 
             return co2, temp, humi
         except Exception as e:
-            print("SCD40 read error:", e)
+            print("SCD40/SCD41 read error:", e)
             return None, None, None
 
 
@@ -170,8 +170,8 @@ class AirQuality(Activity):
         print("I2C devices detected:", [hex(d) for d in devices])
 
         if 0x62 in devices:
-            print("Detected sensor: SCD40")
-            return SCD40(self.i2c)
+            print("Detected sensor: SCD40/SCD41")
+            return SCD4x(self.i2c)
         elif 0x44 in devices or 0x45 in devices:
             addr = 0x44 if 0x44 in devices else 0x45
             print(f"Detected sensor: SHT30/SHT31 ({hex(addr)})")
