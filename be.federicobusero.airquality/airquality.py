@@ -12,7 +12,7 @@ class SCD40:
 
     def start(self):
         try:
-            self.i2c.writeto(self.I2C_ADDR, b'\x21\xb1')  # Start continuous measurement
+            self.i2c.writeto(self.I2C_ADDR, b'\x21\xb1')
         except Exception as e:
             print("SCD40 start error:", e)
 
@@ -45,7 +45,7 @@ class SHT3x:
 
     def read_measurement(self):
         try:
-            self.i2c.writeto(self.addr, b'\x2c\x06')  # High repeatability read
+            self.i2c.writeto(self.addr, b'\x2c\x06')
             time.sleep_ms(15)
             data = self.i2c.readfrom(self.addr, 6)
 
@@ -55,7 +55,7 @@ class SHT3x:
             raw_humi = (data[3] << 8) | data[4]
             humi = 100.0 * raw_humi / 65535.0
 
-            return None, temp, humi  # No CO2 available
+            return None, temp, humi
         except Exception as e:
             print("SHT3x read error:", e)
             return None, None, None
@@ -69,7 +69,6 @@ class AHT20:
         self.i2c = i2c
 
     def start(self):
-        # Initialization trigger if needed
         try:
             self.i2c.writeto(self.I2C_ADDR, b'\xbe\x08\x00')
             time.sleep_ms(10)
@@ -78,26 +77,24 @@ class AHT20:
 
     def read_measurement(self):
         try:
-            # Trigger measurement
             self.i2c.writeto(self.I2C_ADDR, b'\xac\x33\x00')
             time.sleep_ms(80)
             data = self.i2c.readfrom(self.I2C_ADDR, 7)
 
-            # Convert 20-bit raw humidity & temperature
             raw_humi = ((data[1] << 12) | (data[2] << 4) | (data[3] >> 4))
             humi = (raw_humi * 100.0) / 1048576.0
 
             raw_temp = (((data[3] & 0x0F) << 16) | (data[4] << 8) | data[5])
             temp = ((raw_temp * 200.0) / 1048576.0) - 50.0
 
-            return None, temp, humi  # No CO2 available
+            return None, temp, humi
         except Exception as e:
             print("AHT20 read error:", e)
             return None, None, None
 
 
 class AM2320_DHT12:
-    """Combined Driver for AM2320 & DHT12 (Temp, Humidity) - I2C Addr: 0x5C"""
+    """Driver for AM2320 & DHT12 (Temp, Humidity) - I2C Addr: 0x5C"""
     I2C_ADDR = 0x5C
 
     def __init__(self, i2c):
@@ -107,16 +104,13 @@ class AM2320_DHT12:
         pass
 
     def read_measurement(self):
-        # 1. Try AM2320 reading protocol
         try:
-            # Wake up AM2320 sensor (it sleeps to avoid self-heating)
             try:
                 self.i2c.writeto(self.I2C_ADDR, b'')
             except Exception:
                 pass
             time.sleep_ms(2)
 
-            # Send Modbus-like read function code 0x03, start 0x00, 4 registers
             self.i2c.writeto(self.I2C_ADDR, b'\x03\x00\x04')
             time.sleep_ms(2)
             data = self.i2c.readfrom(self.I2C_ADDR, 8)
@@ -129,7 +123,6 @@ class AM2320_DHT12:
         except Exception:
             pass
 
-        # 2. Fallback to standard DHT12 reading protocol
         try:
             self.i2c.writeto(self.I2C_ADDR, b'\x00')
             data = self.i2c.readfrom(self.I2C_ADDR, 5)
@@ -147,6 +140,12 @@ class AM2320_DHT12:
 
 
 class AirQuality(Activity):
+    # Color Constants
+    COLOR_GREEN = 0x00E676
+    COLOR_ORANGE = 0xFF9800
+    COLOR_RED = 0xFF1744
+    COLOR_NEUTRAL = 0x757575
+
     def onCreate(self):
         """Initialize variables and perform automatic sensor detection on the I2C bus."""
         self.temp_val = 0.0
@@ -200,35 +199,35 @@ class AirQuality(Activity):
         container.set_style_border_width(0, 0)
         container.set_style_pad_all(10, 0)
 
-        # Row 1: Temperature (Icon only)
-        self.lbl_temp = self._create_row(
+        # Row 1: Temperature (Icon only, NO color strip)
+        self.lbl_temp, _ = self._create_row(
             parent=container,
             icon_symbol=lv.SYMBOL.TEMPERATURE if hasattr(lv.SYMBOL, "TEMPERATURE") else "🌡",
             value_str="--.- °C",
-            status_color=0x00E676
+            show_bar=False
         )
 
-        # Row 2: Humidity (Icon only)
-        self.lbl_humi = self._create_row(
+        # Row 2: Humidity (Icon only, dynamic strip)
+        self.lbl_humi, self.bar_humi = self._create_row(
             parent=container,
             icon_symbol="💧",
             value_str="-- %",
-            status_color=0xFFC107
+            show_bar=True
         )
 
-        # Row 3: CO₂ (Text 'CO₂' with subscript ₂)
-        self.lbl_co2 = self._create_row(
+        # Row 3: CO₂ (Text 'CO₂', dynamic strip)
+        self.lbl_co2, self.bar_co2 = self._create_row(
             parent=container,
             icon_symbol="CO₂",
             value_str="----",
-            status_color=0x00E676
+            show_bar=True
         )
 
         self._update_sensor_data()
         self.timer = lv.timer_create(self._timer_cb, 3000, None)
 
-    def _create_row(self, parent, icon_symbol, value_str, status_color):
-        """Helper method to construct each UI row."""
+    def _create_row(self, parent, icon_symbol, value_str, show_bar=True):
+        """Helper method to construct a UI row. If show_bar is False, adds an invisible spacer."""
         row = lv.obj(parent)
         row.set_size(lv.pct(100), 65)
         row.set_flex_flow(lv.FLEX_FLOW.ROW)
@@ -252,32 +251,63 @@ class AirQuality(Activity):
 
         bar = lv.obj(row)
         bar.set_size(12, 45)
-        bar.set_style_bg_color(lv.color_hex(status_color), 0)
-        bar.set_style_bg_opa(lv.OPA.COVER, 0)
         bar.set_style_radius(6, 0)
         bar.set_style_border_width(0, 0)
 
-        return val_lbl
+        if show_bar:
+            bar.set_style_bg_color(lv.color_hex(self.COLOR_NEUTRAL), 0)
+            bar.set_style_bg_opa(lv.OPA.COVER, 0)
+        else:
+            # Invisible spacer maintaining alignment layout
+            bar.set_style_bg_opa(lv.OPA.TRANSP, 0)
+
+        return val_lbl, bar
+
+    def _get_humidity_color(self, humi):
+        """Evaluates humidity quality: Optimal (40-60%), Fair (30-39% or 61-70%), Poor (<30% or >70%)."""
+        if 40 <= humi <= 60:
+            return self.COLOR_GREEN
+        elif 30 <= humi < 40 or 61 <= humi <= 70:
+            return self.COLOR_ORANGE
+        else:
+            return self.COLOR_RED
+
+    def _get_co2_color(self, co2):
+        """Evaluates CO2 ppm quality: Good (<800 ppm), Moderate (800-1200 ppm), Poor (>1200 ppm)."""
+        if co2 < 800:
+            return self.COLOR_GREEN
+        elif 800 <= co2 <= 1200:
+            return self.COLOR_ORANGE
+        else:
+            return self.COLOR_RED
 
     def _timer_cb(self, timer):
         """Periodic timer callback to read data and refresh UI."""
         self._update_sensor_data()
 
     def _update_sensor_data(self):
-        """Fetch values from auto-detected sensor and update display values."""
+        """Fetch values from auto-detected sensor and update display values + dynamic strip colors."""
         if not self.sensor:
             return
 
         co2, temp, humi = self.sensor.read_measurement()
 
-        if temp is not None and humi is not None:
+        if temp is not None:
             self.lbl_temp.set_text(f"{temp:.1f} °C")
-            self.lbl_humi.set_text(f"{int(humi)} %")
+
+        if humi is not None:
+            humi_int = int(humi)
+            self.lbl_humi.set_text(f"{humi_int} %")
+            humi_color = self._get_humidity_color(humi_int)
+            self.bar_humi.set_style_bg_color(lv.color_hex(humi_color), 0)
 
         if co2 is not None:
             self.lbl_co2.set_text(f"{co2:04d}")
+            co2_color = self._get_co2_color(co2)
+            self.bar_co2.set_style_bg_color(lv.color_hex(co2_color), 0)
         else:
             self.lbl_co2.set_text("N/A")
+            self.bar_co2.set_style_bg_color(lv.color_hex(self.COLOR_NEUTRAL), 0)
 
     def onStop(self, screen):
         """Clean up active timers upon exiting activity."""
