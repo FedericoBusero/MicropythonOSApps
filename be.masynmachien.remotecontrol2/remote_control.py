@@ -77,6 +77,17 @@ if hardware_id == "fri3d_2024":
 else:
     # Fri3d badge 2026
     import mpos
+    import mpos.board.fri3d_2026
+    # from mpos.board.fri3d_2026 import (
+    #    btn_start, 
+    #    expander
+    # )
+    
+    _IDX_BTN_MENU  = const(5)
+    _IDX_BTN_B     = const(6)
+    _IDX_BTN_A     = const(7)
+    _IDX_BTN_Y     = const(8)
+    _IDX_BTN_X     = const(9)
 
     class Buttons:
         """Hardware-abstractie voor de digitale knoppen via de CH32 coprocessor op de Fri3d Badge 2026.
@@ -85,22 +96,22 @@ else:
         """
     
         def get_button_a_value(self):
-            return 0 if mpos.io_expander.button_a else 1
+            return 0 if mpos.io_expander.digital[_IDX_BTN_A] else 1
     
         def get_button_b_value(self):
-            return 0 if mpos.io_expander.button_b else 1
+            return 0 if mpos.io_expander.digital[_IDX_BTN_B] else 1
     
         def get_button_x_value(self):
-            return 0 if mpos.io_expander.button_x else 1
+            return 0 if mpos.io_expander.digital[_IDX_BTN_X] else 1
     
         def get_button_y_value(self):
-            return 0 if mpos.io_expander.button_y else 1
+            return 0 if mpos.io_expander.digital[_IDX_BTN_Y] else 1
     
         def get_button_menu_value(self):
-            return 0 if mpos.io_expander.button_menu else 1
+            return 0 if mpos.io_expander.digital[_IDX_BTN_MENU] else 1
         
         def get_button_start_value(self):
-            return 0 if mpos.io_expander.button_start else 1
+            return btn_start.value()
     
     class Joystick:
         """Hardware-abstractie voor de I2C joystick via de CH32 coprocessor op de Fri3d Badge 2026."""
@@ -203,7 +214,7 @@ class RemoteControl(Activity):
         self.status_label = lv.label(screen)
         self.status_label.set_style_text_font(lv.font_montserrat_16, lv.PART.MAIN)
         self.status_label.set_text("Startup")
-        self.status_label.align(lv.ALIGN.TOP_LEFT, 30, 40)
+        self.status_label.align(lv.ALIGN.TOP_LEFT, 30, 35)
 
         # SSID Label bovenaan het scherm
         self.wifi_label = lv.label(screen)
@@ -219,7 +230,7 @@ class RemoteControl(Activity):
         self.rect.set_style_border_color(lv.color_hex(0x00FF00), lv.PART.MAIN)
         self.rect.set_style_border_width(1, lv.PART.MAIN)
         self.rect.remove_flag(lv.obj.FLAG.SCROLLABLE)
-        self.rect.align(lv.ALIGN.TOP_MID, 0, 130)
+        self.rect.align(lv.ALIGN.TOP_MID, 0, 138)
 
         self.circ_area = lv.obj(self.rect)
         self.circ_area.set_size(JOYSTICK_CIRCLE_RADIUS, JOYSTICK_CIRCLE_RADIUS)
@@ -239,7 +250,7 @@ class RemoteControl(Activity):
         self.slider2 = lv.slider(screen)
         self.slider2.set_range(0, 360)
         self.slider2.set_value(180, False)
-        self.slider2.align(lv.ALIGN.TOP_LEFT, 30, 100)
+        self.slider2.align(lv.ALIGN.TOP_LEFT, 30, 110)
         # self.slider2.set_size(160, 20)  
         self.slider2.set_style_pad_all(10, lv.PART.KNOB)        
         self.slider2.set_style_bg_color(lv.color_hex(0x00FF00), lv.PART.KNOB)
