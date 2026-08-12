@@ -4,7 +4,7 @@
   "short_description": "Bestuur blimps, hovercraft, rc car enz over Wifi",
   "long_description": "Bestuur blimps, hovercraft, rc car enz over Wifi",
   "fullname": "be.masynmachien.remotecontrol2",
-  "version": "0.1.0",
+  "version": "0.3.0",
   "category": "Communication",
   "activities": [
     {
