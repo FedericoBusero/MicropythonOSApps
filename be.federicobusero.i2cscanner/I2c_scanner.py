@@ -97,6 +97,7 @@ class I2CScannerActivity(Activity):
         self.table.set_style_text_color(lv.color_hex(0xCCCCCC), 0)
         self.table.set_style_border_color(lv.color_hex(0x2A2A2A), 0)
         self.table.set_style_pad_all(1, lv.PART.ITEMS)
+        self.table.set_style_text_font(lv.font_montserrat_10, lv.PART.MAIN)
 
         # First column width (row headers: 00-70)
         self.table.set_column_width(0, 26)
