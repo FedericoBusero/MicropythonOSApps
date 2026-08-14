@@ -77,11 +77,9 @@ if hardware_id == "fri3d_2024":
 else:
     # Fri3d badge 2026
     import mpos
-    # import mpos.board.fri3d_2026
-    # from mpos.board.fri3d_2026 import (
-    #    btn_start, 
-    #    expander
-    # )
+    from mpos.board.fri3d_2026 import (
+        btn_start, 
+    )
     
     _IDX_BTN_MENU  = const(5)
     _IDX_BTN_B     = const(6)
