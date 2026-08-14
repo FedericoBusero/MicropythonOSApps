@@ -1,0 +1,21 @@
+{
+  "name": "I2C Scanner",
+  "publisher": "FedericoBusero",
+  "short_description": "I2C Scanner",
+  "long_description": "I2C Scanner",
+  "fullname": "be.federicobusero.i2cscanner",
+  "version": "0.1.0",
+  "category": "development",
+  "activities": [
+    {
+      "entrypoint": "i2c_scanner.py",
+      "classname": "I2CScannerActivity",
+      "intent_filters": [
+        {
+          "action": "main",
+          "category": "launcher"
+        }
+      ]
+    }
+  ]
+}
