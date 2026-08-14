@@ -9,6 +9,8 @@ class I2CScannerActivity(Activity):
     """
 
     def onCreate(self):
+        screen = lv.obj()
+        
         """Initialize activity instance variables."""
         self.i2c = None
         self.scan_timer = None
@@ -16,7 +18,6 @@ class I2CScannerActivity(Activity):
         self.status_label = None
         self.found_count = 0
 
-    def onStart(self, screen):
         """Set up dark mode UI, obtain I2C bus, and start background scanner."""
         # 1. Dark Mode Background Setup
         screen.set_style_bg_color(lv.color_hex(0x121212), 0)
@@ -58,18 +59,18 @@ class I2CScannerActivity(Activity):
         self._build_table_grid(container)
 
         # 5. Hardware Acquisition via DeviceManager
-        try:
-            self.i2c = DeviceManager.getBus(type="i2c")
-            if self.i2c is None:
-                raise RuntimeError("I2C bus unavailable")
-            
-            # 6. Non-blocking Background Scan Timer (Every 2000 ms)
-            self.scan_timer = lv.timer_create(self._perform_scan, 2000, None)
-            self._perform_scan(None)  # Perform immediate first scan
-            
-        except Exception as err:
-            self._update_status(f"Bus Error: {err}", is_error=True)
+        self.i2c = DeviceManager.getBus(type="i2c")
+        if self.i2c is None:
+            raise RuntimeError("I2C bus unavailable")
 
+        self.setContentView(screen)
+
+    def onStart(self, screen):
+        # 6. Non-blocking Background Scan Timer (Every 2000 ms)
+        self.scan_timer = lv.timer_create(self._perform_scan, 2000, None)
+        self._perform_scan(None)  # Perform immediate first scan
+
+    
     def onStop(self, screen):
         """Resource management & cleanup on Activity teardown."""
         # Deactivate and delete LVGL timer safely
@@ -89,7 +90,7 @@ class I2CScannerActivity(Activity):
         
         # Grid dimensions: 1 header row + 8 rows (00..70); 1 header col + 16 cols (0..F)
         self.table.set_row_count(9)
-        self.table.set_col_count(17)
+        self.table.set_column_count(17)
 
         # Styling adjustments for badge screen compactness
         self.table.set_style_bg_color(lv.color_hex(0x181818), 0)
@@ -98,11 +99,11 @@ class I2CScannerActivity(Activity):
         self.table.set_style_pad_all(1, lv.PART.ITEMS)
 
         # First column width (row headers: 00-70)
-        self.table.set_col_width(0, 26)
+        self.table.set_column_width(0, 26)
         
         # Hex columns width (0 to F)
         for c in range(1, 17):
-            self.table.set_col_width(c, 17)
+            self.table.set_column_width(c, 17)
 
         # Set Top Header Row Labels (0 to F)
         self.table.set_cell_value(0, 0, "")
