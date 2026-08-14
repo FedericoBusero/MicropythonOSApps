@@ -77,7 +77,7 @@ if hardware_id == "fri3d_2024":
 else:
     # Fri3d badge 2026
     import mpos
-    import mpos.board.fri3d_2026
+    # import mpos.board.fri3d_2026
     # from mpos.board.fri3d_2026 import (
     #    btn_start, 
     #    expander
@@ -122,8 +122,8 @@ else:
             Retourneert (raw_x, raw_y).
             """
             # Kanaal 0 en 1 van de expander.analog bevatten de joystick ADC waarden
-            raw_x = mpos.io_expander.analog[0]
-            raw_y = mpos.io_expander.analog[1]
+            raw_x = mpos.io_expander.analog[4]
+            raw_y = mpos.io_expander.analog[3]
             return raw_x, raw_y
     
     
