@@ -2,30 +2,67 @@ import lvgl as lv
 import time
 from mpos import Activity, DeviceManager
 
+
 class SCD4x:
-    """Driver for Sensirion SCD40/SCD41 (CO2, Temp, Humidity) - I2C Addr: 0x62"""
+    """Driver for Sensirion SCD40/SCD41 (CO2, Temp, Humidity) - Non-Blocking I2C Addr: 0x62"""
     I2C_ADDR = 0x62
 
     def __init__(self, i2c):
         self.i2c = i2c
+        self.state = "INIT"
+        self.target_time = 0
 
     def start(self):
+        """Initiates non-blocking reset & periodic measurement sequence."""
         try:
-            self.i2c.writeto(self.I2C_ADDR, b'\x21\xb1')
+            # Step 1: Send stop command to reset state machine
+            self.i2c.writeto(self.I2C_ADDR, b'\x3f\x86')
+            self.state = "WAIT_START"
+            # Schedule start command 500ms from now
+            self.target_time = time.ticks_add(time.ticks_ms(), 500)
         except Exception as e:
             print("SCD40/SCD41 start error:", e)
 
+    def _process(self):
+        """Advances internal timing states non-blockingly."""
+        now = time.ticks_ms()
+        if self.state == "WAIT_START":
+            if time.ticks_diff(now, self.target_time) >= 0:
+                try:
+                    # Step 2: Start periodic measurement mode
+                    self.i2c.writeto(self.I2C_ADDR, b'\x21\xb1')
+                    self.state = "RUNNING"
+                except Exception as e:
+                    print("SCD40 start error:", e)
+                    self.state = "ERROR"
+
+    def is_data_ready(self):
+        """Non-blocking check (0xE4B8) to see if new data is available."""
+        if self.state != "RUNNING":
+            return False
+        try:
+            self.i2c.writeto(self.I2C_ADDR, b'\xe4\xb8')
+            data = self.i2c.readfrom(self.I2C_ADDR, 3)
+            status = (data[0] << 8) | data[1]
+            return (status & 0x07FF) != 0
+        except Exception:
+            return False
+
     def read_measurement(self):
+        self._process()
+
+        if not self.is_data_ready():
+            return None, None, None
+
         try:
             self.i2c.writeto(self.I2C_ADDR, b'\xec\x05')
-            time.sleep_ms(5)
             data = self.i2c.readfrom(self.I2C_ADDR, 9)
 
             co2 = (data[0] << 8) | data[1]
             raw_temp = (data[3] << 8) | data[4]
-            temp = -45.0 + (175.0 * raw_temp / 65535.0)
+            temp = -45.0 + (175.0 * float(raw_temp) / 65535.0)
             raw_humi = (data[6] << 8) | data[7]
-            humi = 100.0 * raw_humi / 65535.0
+            humi = 100.0 * float(raw_humi) / 65535.0
 
             return co2, temp, humi
         except Exception as e:
@@ -34,119 +71,176 @@ class SCD4x:
 
 
 class SHT3x:
-    """Driver for Sensirion SHT30 / SHT31 (Temp, Humidity) - I2C Addr: 0x44 / 0x45"""
+    """Driver for Sensirion SHT30 / SHT31 - Non-Blocking I2C Addr: 0x44 / 0x45"""
     def __init__(self, i2c, addr=0x44):
         self.i2c = i2c
         self.addr = addr
+        self.state = "IDLE"
+        self.target_time = 0
 
     def start(self):
         pass
 
     def read_measurement(self):
-        try:
-            self.i2c.writeto(self.addr, b'\x2c\x06')
-            time.sleep_ms(15)
-            data = self.i2c.readfrom(self.addr, 6)
+        now = time.ticks_ms()
 
-            raw_temp = (data[0] << 8) | data[1]
-            temp = -45.0 + (175.0 * raw_temp / 65535.0)
-
-            raw_humi = (data[3] << 8) | data[4]
-            humi = 100.0 * raw_humi / 65535.0
-
-            return None, temp, humi
-        except Exception as e:
-            print("SHT3x read error:", e)
+        if self.state == "IDLE":
+            try:
+                # Trigger single-shot measurement
+                self.i2c.writeto(self.addr, b'\x2c\x06')
+                self.state = "WAIT_MEASURE"
+                self.target_time = time.ticks_add(now, 15)  # 15ms non-blocking conversion
+            except Exception as e:
+                print("SHT3x trigger error:", e)
             return None, None, None
+
+        elif self.state == "WAIT_MEASURE":
+            if time.ticks_diff(now, self.target_time) >= 0:
+                try:
+                    data = self.i2c.readfrom(self.addr, 6)
+                    self.state = "IDLE"
+
+                    raw_temp = (data[0] << 8) | data[1]
+                    temp = -45.0 + (175.0 * raw_temp / 65535.0)
+
+                    raw_humi = (data[3] << 8) | data[4]
+                    humi = 100.0 * raw_humi / 65535.0
+
+                    return None, temp, humi
+                except Exception as e:
+                    print("SHT3x read error:", e)
+                    self.state = "IDLE"
+
+        return None, None, None
 
 
 class AHT20:
-    """Driver for ASAIR AHT20 / AHT21 (Temp, Humidity) - I2C Addr: 0x38"""
+    """Driver for ASAIR AHT20 / AHT21 - Non-Blocking I2C Addr: 0x38"""
     I2C_ADDR = 0x38
 
     def __init__(self, i2c):
         self.i2c = i2c
+        self.state = "IDLE"
+        self.target_time = 0
 
     def start(self):
         try:
             self.i2c.writeto(self.I2C_ADDR, b'\xbe\x08\x00')
-            time.sleep_ms(10)
         except Exception:
             pass
 
     def read_measurement(self):
-        try:
-            self.i2c.writeto(self.I2C_ADDR, b'\xac\x33\x00')
-            time.sleep_ms(80)
-            data = self.i2c.readfrom(self.I2C_ADDR, 7)
+        now = time.ticks_ms()
 
-            raw_humi = ((data[1] << 12) | (data[2] << 4) | (data[3] >> 4))
-            humi = (raw_humi * 100.0) / 1048576.0
-
-            raw_temp = (((data[3] & 0x0F) << 16) | (data[4] << 8) | data[5])
-            temp = ((raw_temp * 200.0) / 1048576.0) - 50.0
-
-            return None, temp, humi
-        except Exception as e:
-            print("AHT20 read error:", e)
+        if self.state == "IDLE":
+            try:
+                # Trigger measurement
+                self.i2c.writeto(self.I2C_ADDR, b'\xac\x33\x00')
+                self.state = "WAIT_MEASURE"
+                self.target_time = time.ticks_add(now, 80)  # 80ms conversion delay
+            except Exception as e:
+                print("AHT20 trigger error:", e)
             return None, None, None
+
+        elif self.state == "WAIT_MEASURE":
+            if time.ticks_diff(now, self.target_time) >= 0:
+                try:
+                    data = self.i2c.readfrom(self.I2C_ADDR, 7)
+                    self.state = "IDLE"
+
+                    # Check busy bit (bit 7 of byte 0)
+                    if (data[0] & 0x80) != 0:
+                        return None, None, None
+
+                    raw_humi = ((data[1] << 12) | (data[2] << 4) | (data[3] >> 4))
+                    humi = (raw_humi * 100.0) / 1048576.0
+
+                    raw_temp = (((data[3] & 0x0F) << 16) | (data[4] << 8) | data[5])
+                    temp = ((raw_temp * 200.0) / 1048576.0) - 50.0
+
+                    return None, temp, humi
+                except Exception as e:
+                    print("AHT20 read error:", e)
+                    self.state = "IDLE"
+
+        return None, None, None
 
 
 class AM2320_DHT12:
-    """Driver for AM2320 & DHT12 (Temp, Humidity) - I2C Addr: 0x5C"""
+    """Driver for AM2320 & DHT12 - Non-Blocking I2C Addr: 0x5C"""
     I2C_ADDR = 0x5C
 
     def __init__(self, i2c):
         self.i2c = i2c
+        self.state = "IDLE"
+        self.target_time = 0
 
     def start(self):
         pass
 
     def read_measurement(self):
-        try:
+        now = time.ticks_ms()
+
+        if self.state == "IDLE":
+            # Wake up sensor
             try:
                 self.i2c.writeto(self.I2C_ADDR, b'')
             except Exception:
                 pass
-            time.sleep_ms(2)
+            self.state = "WOKEN"
+            self.target_time = time.ticks_add(now, 2)
+            return None, None, None
 
-            self.i2c.writeto(self.I2C_ADDR, b'\x03\x00\x04')
-            time.sleep_ms(2)
-            data = self.i2c.readfrom(self.I2C_ADDR, 8)
+        elif self.state == "WOKEN":
+            if time.ticks_diff(now, self.target_time) >= 0:
+                try:
+                    # Issue read command
+                    self.i2c.writeto(self.I2C_ADDR, b'\x03\x00\x04')
+                    self.state = "WAIT_READ"
+                    self.target_time = time.ticks_add(now, 2)
+                except Exception:
+                    # Fallback path directly to DHT12
+                    self.state = "DHT12_READ"
+            return None, None, None
 
-            if data[0] == 0x03 and data[1] == 0x04:
-                humi = ((data[2] << 8) | data[3]) / 10.0
-                raw_temp = ((data[4] & 0x7F) << 8) | data[5]
-                temp = -raw_temp / 10.0 if (data[4] & 0x80) else raw_temp / 10.0
-                return None, temp, humi
-        except Exception:
-            pass
+        elif self.state == "WAIT_READ":
+            if time.ticks_diff(now, self.target_time) >= 0:
+                self.state = "IDLE"
+                try:
+                    data = self.i2c.readfrom(self.I2C_ADDR, 8)
+                    if data[0] == 0x03 and data[1] == 0x04:
+                        humi = ((data[2] << 8) | data[3]) / 10.0
+                        raw_temp = ((data[4] & 0x7F) << 8) | data[5]
+                        temp = -raw_temp / 10.0 if (data[4] & 0x80) else raw_temp / 10.0
+                        return None, temp, humi
+                except Exception:
+                    pass
 
-        try:
-            self.i2c.writeto(self.I2C_ADDR, b'\x00')
-            data = self.i2c.readfrom(self.I2C_ADDR, 5)
+        elif self.state == "DHT12_READ":
+            self.state = "IDLE"
+            try:
+                self.i2c.writeto(self.I2C_ADDR, b'\x00')
+                data = self.i2c.readfrom(self.I2C_ADDR, 5)
 
-            if (data[0] + data[1] + data[2] + data[3]) & 0xFF == data[4]:
-                humi = data[0] + data[1] * 0.1
-                temp = data[2] + (data[3] & 0x7F) * 0.1
-                if data[3] & 0x80:
-                    temp = -temp
-                return None, temp, humi
-        except Exception as e:
-            print("AM2320/DHT12 read error:", e)
+                if (data[0] + data[1] + data[2] + data[3]) & 0xFF == data[4]:
+                    humi = data[0] + data[1] * 0.1
+                    temp = data[2] + (data[3] & 0x7F) * 0.1
+                    if data[3] & 0x80:
+                        temp = -temp
+                    return None, temp, humi
+            except Exception as e:
+                print("AM2320/DHT12 read error:", e)
 
         return None, None, None
 
 
 class AirQuality(Activity):
-    # Color Constants
     COLOR_GREEN = 0x00E676
     COLOR_ORANGE = 0xFF9800
     COLOR_RED = 0xFF1744
     COLOR_NEUTRAL = 0x757575
 
     def onCreate(self):
-        """Initialize variables and perform automatic sensor detection on the I2C bus."""
         screen = lv.obj()
 
         self.temp_val = 0.0
@@ -154,22 +248,20 @@ class AirQuality(Activity):
         self.co2_val = None
         self.timer = None
         self.sensor = None
-        print("onCreate")
 
         try:
             self.i2c = DeviceManager.getBus(type="i2c")
             if self.i2c is None:
                 raise RuntimeError("I2C bus unavailable")
-                
-            if self.i2c:
-                self.sensor = self._autodetect_sensor()
-                if self.sensor:
-                    self.sensor.start()
+
+            self.sensor = self._autodetect_sensor()
+            if self.sensor:
+                self.sensor.start()
         except Exception as e:
             self.i2c = None
             print("DeviceManager I2C error:", e)
 
-            """Build screen elements and launch the update timer."""
+        # Screen Styling
         screen.set_style_bg_color(lv.color_hex(0x1E1E1E), 0)
         screen.set_style_bg_opa(lv.OPA.COVER, 0)
 
@@ -181,23 +273,23 @@ class AirQuality(Activity):
         container.set_style_border_width(0, 0)
         container.set_style_pad_all(10, 0)
 
-        # Row 1: Temperature (Icon only, NO color strip)
+        # Row 1: Temperature
         self.lbl_temp, _ = self._create_row(
             parent=container,
-            icon_symbol = "Temperature",
+            icon_symbol="Temp",
             value_str="--.- °C",
             show_bar=False
         )
 
-        # Row 2: Humidity (Icon only, dynamic strip)
+        # Row 2: Humidity
         self.lbl_humi, self.bar_humi = self._create_row(
             parent=container,
-            icon_symbol="Humidity",
+            icon_symbol="Humi",
             value_str="-- %",
             show_bar=True
         )
 
-        # Row 3: CO₂ (Text 'CO₂', dynamic strip)
+        # Row 3: CO₂
         self.lbl_co2, self.bar_co2 = self._create_row(
             parent=container,
             icon_symbol="CO2",
@@ -207,9 +299,7 @@ class AirQuality(Activity):
 
         self.setContentView(screen)
 
-
     def _autodetect_sensor(self):
-        """Scans the I2C bus and instantiates the first detected sensor."""
         devices = self.i2c.scan()
         print("I2C devices detected:", [hex(d) for d in devices])
 
@@ -231,11 +321,10 @@ class AirQuality(Activity):
             return None
 
     def onStart(self, screen):
-        self._update_sensor_data()
-        self.timer = lv.timer_create(self._timer_cb, 5000, None)
+        # Poll higher frequency (e.g., every 500ms) to let non-blocking state machines tick smoothly
+        self.timer = lv.timer_create(self._timer_cb, 500, None)
 
     def _create_row(self, parent, icon_symbol, value_str, show_bar=True):
-        """Helper method to construct a UI row. If show_bar is False, adds an invisible spacer."""
         row = lv.obj(parent)
         row.set_size(lv.pct(100), 65)
         row.set_flex_flow(lv.FLEX_FLOW.ROW)
@@ -266,13 +355,11 @@ class AirQuality(Activity):
             bar.set_style_bg_color(lv.color_hex(self.COLOR_NEUTRAL), 0)
             bar.set_style_bg_opa(lv.OPA.COVER, 0)
         else:
-            # Invisible spacer maintaining alignment layout
             bar.set_style_bg_opa(lv.OPA.TRANSP, 0)
 
         return val_lbl, bar
 
     def _get_humidity_color(self, humi):
-        """Evaluates humidity quality: Optimal (40-60%), Fair (30-39% or 61-70%), Poor (<30% or >70%)."""
         if 40 <= humi <= 60:
             return self.COLOR_GREEN
         elif 30 <= humi < 40 or 61 <= humi <= 70:
@@ -281,7 +368,6 @@ class AirQuality(Activity):
             return self.COLOR_RED
 
     def _get_co2_color(self, co2):
-        """Evaluates CO2 ppm quality: Good (<800 ppm), Moderate (800-1200 ppm), Poor (>1200 ppm)."""
         if co2 < 800:
             return self.COLOR_GREEN
         elif 800 <= co2 <= 1200:
@@ -290,35 +376,41 @@ class AirQuality(Activity):
             return self.COLOR_RED
 
     def _timer_cb(self, timer):
-        """Periodic timer callback to read data and refresh UI."""
         self._update_sensor_data()
 
     def _update_sensor_data(self):
-        """Fetch values from auto-detected sensor and update display values + dynamic strip colors."""
-        if not self.sensor:
+        if not self.sensor or not hasattr(self, "lbl_temp"):
             return
 
         co2, temp, humi = self.sensor.read_measurement()
 
-        if temp is not None:
-            self.lbl_temp.set_text(f"{temp:.1f} °C")
+        try:
+            if temp is not None:
+                self.lbl_temp.set_text(f"{temp:.1f} °C")
 
-        if humi is not None:
-            humi_int = int(humi)
-            self.lbl_humi.set_text(f"{humi_int} %")
-            humi_color = self._get_humidity_color(humi_int)
-            self.bar_humi.set_style_bg_color(lv.color_hex(humi_color), 0)
+            if humi is not None:
+                humi_int = int(humi)
+                self.lbl_humi.set_text(f"{humi_int} %")
+                humi_color = self._get_humidity_color(humi_int)
+                self.bar_humi.set_style_bg_color(lv.color_hex(humi_color), 0)
 
-        if co2 is not None:
-            self.lbl_co2.set_text(f"{co2:04d}")
-            co2_color = self._get_co2_color(co2)
-            self.bar_co2.set_style_bg_color(lv.color_hex(co2_color), 0)
-        else:
-            self.lbl_co2.set_text("N/A")
-            self.bar_co2.set_style_bg_color(lv.color_hex(self.COLOR_NEUTRAL), 0)
-
+            if co2 is not None:
+                self.lbl_co2.set_text(f"{co2:04d} ppm")
+                co2_color = self._get_co2_color(co2)
+                self.bar_co2.set_style_bg_color(lv.color_hex(co2_color), 0)
+        except RuntimeError:
+            # Prevents LvReferenceError if UI elements were deleted mid-update
+            pass
+            
     def onStop(self, screen):
-        """Clean up active timers upon exiting activity."""
+        """Safely delete the LVGL timer upon leaving the Activity."""
         if self.timer:
-            self.timer._del()
+            try:
+                # Modern MicroPython LVGL binding timer deletion
+                self.timer.delete()
+            except AttributeError:
+                try:
+                    self.timer._del()
+                except Exception:
+                    pass
             self.timer = None
