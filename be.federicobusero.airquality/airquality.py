@@ -184,7 +184,6 @@ class AirQuality(Activity):
         # Row 1: Temperature (Icon only, NO color strip)
         self.lbl_temp, _ = self._create_row(
             parent=container,
-            # icon_symbol=lv.SYMBOL.TEMPERATURE if hasattr(lv.SYMBOL, "TEMPERATURE") else "🌡",
             icon_symbol = "Temperature",
             value_str="--.- °C",
             show_bar=False
@@ -193,7 +192,6 @@ class AirQuality(Activity):
         # Row 2: Humidity (Icon only, dynamic strip)
         self.lbl_humi, self.bar_humi = self._create_row(
             parent=container,
-            # icon_symbol="💧",
             icon_symbol="Humidity",
             value_str="-- %",
             show_bar=True
@@ -202,7 +200,6 @@ class AirQuality(Activity):
         # Row 3: CO₂ (Text 'CO₂', dynamic strip)
         self.lbl_co2, self.bar_co2 = self._create_row(
             parent=container,
-            #icon_symbol="CO₂",
             icon_symbol="CO2",
             value_str="----",
             show_bar=True
@@ -235,7 +232,7 @@ class AirQuality(Activity):
 
     def onStart(self, screen):
         self._update_sensor_data()
-        self.timer = lv.timer_create(self._timer_cb, 3000, None)
+        self.timer = lv.timer_create(self._timer_cb, 5000, None)
 
     def _create_row(self, parent, icon_symbol, value_str, show_bar=True):
         """Helper method to construct a UI row. If show_bar is False, adds an invisible spacer."""
