@@ -2,7 +2,6 @@ import lvgl as lv
 import time
 from mpos import Activity, DeviceManager
 
-
 class SCD4x:
     """Driver for Sensirion SCD40/SCD41 (CO2, Temp, Humidity) - I2C Addr: 0x62"""
     I2C_ADDR = 0x62
@@ -148,14 +147,20 @@ class AirQuality(Activity):
 
     def onCreate(self):
         """Initialize variables and perform automatic sensor detection on the I2C bus."""
+        screen = lv.obj()
+
         self.temp_val = 0.0
         self.humi_val = 0
         self.co2_val = None
         self.timer = None
         self.sensor = None
+        print("onCreate")
 
         try:
-            self.i2c = DeviceManager.get_i2c()
+            self.i2c = DeviceManager.getBus(type="i2c")
+            if self.i2c is None:
+                raise RuntimeError("I2C bus unavailable")
+                
             if self.i2c:
                 self.sensor = self._autodetect_sensor()
                 if self.sensor:
@@ -163,6 +168,48 @@ class AirQuality(Activity):
         except Exception as e:
             self.i2c = None
             print("DeviceManager I2C error:", e)
+
+            """Build screen elements and launch the update timer."""
+        screen.set_style_bg_color(lv.color_hex(0x1E1E1E), 0)
+        screen.set_style_bg_opa(lv.OPA.COVER, 0)
+
+        container = lv.obj(screen)
+        container.set_size(lv.pct(100), lv.pct(100))
+        container.set_flex_flow(lv.FLEX_FLOW.COLUMN)
+        container.set_flex_align(lv.FLEX_ALIGN.SPACE_EVENLY, lv.FLEX_ALIGN.CENTER, lv.FLEX_ALIGN.CENTER)
+        container.set_style_bg_opa(lv.OPA.TRANSP, 0)
+        container.set_style_border_width(0, 0)
+        container.set_style_pad_all(10, 0)
+
+        # Row 1: Temperature (Icon only, NO color strip)
+        self.lbl_temp, _ = self._create_row(
+            parent=container,
+            # icon_symbol=lv.SYMBOL.TEMPERATURE if hasattr(lv.SYMBOL, "TEMPERATURE") else "🌡",
+            icon_symbol = "Temperature",
+            value_str="--.- °C",
+            show_bar=False
+        )
+
+        # Row 2: Humidity (Icon only, dynamic strip)
+        self.lbl_humi, self.bar_humi = self._create_row(
+            parent=container,
+            # icon_symbol="💧",
+            icon_symbol="Humidity",
+            value_str="-- %",
+            show_bar=True
+        )
+
+        # Row 3: CO₂ (Text 'CO₂', dynamic strip)
+        self.lbl_co2, self.bar_co2 = self._create_row(
+            parent=container,
+            #icon_symbol="CO₂",
+            icon_symbol="CO2",
+            value_str="----",
+            show_bar=True
+        )
+
+        self.setContentView(screen)
+
 
     def _autodetect_sensor(self):
         """Scans the I2C bus and instantiates the first detected sensor."""
@@ -187,42 +234,6 @@ class AirQuality(Activity):
             return None
 
     def onStart(self, screen):
-        """Build screen elements and launch the update timer."""
-        screen.set_style_bg_color(lv.color_hex(0x1E1E1E), 0)
-        screen.set_style_bg_opa(lv.OPA.COVER, 0)
-
-        container = lv.obj(screen)
-        container.set_size(lv.pct(100), lv.pct(100))
-        container.set_flex_flow(lv.FLEX_FLOW.COLUMN)
-        container.set_flex_align(lv.FLEX_ALIGN.SPACE_EVENLY, lv.FLEX_ALIGN.CENTER, lv.FLEX_ALIGN.CENTER)
-        container.set_style_bg_opa(lv.OPA.TRANSP, 0)
-        container.set_style_border_width(0, 0)
-        container.set_style_pad_all(10, 0)
-
-        # Row 1: Temperature (Icon only, NO color strip)
-        self.lbl_temp, _ = self._create_row(
-            parent=container,
-            icon_symbol=lv.SYMBOL.TEMPERATURE if hasattr(lv.SYMBOL, "TEMPERATURE") else "🌡",
-            value_str="--.- °C",
-            show_bar=False
-        )
-
-        # Row 2: Humidity (Icon only, dynamic strip)
-        self.lbl_humi, self.bar_humi = self._create_row(
-            parent=container,
-            icon_symbol="💧",
-            value_str="-- %",
-            show_bar=True
-        )
-
-        # Row 3: CO₂ (Text 'CO₂', dynamic strip)
-        self.lbl_co2, self.bar_co2 = self._create_row(
-            parent=container,
-            icon_symbol="CO₂",
-            value_str="----",
-            show_bar=True
-        )
-
         self._update_sensor_data()
         self.timer = lv.timer_create(self._timer_cb, 3000, None)
 
