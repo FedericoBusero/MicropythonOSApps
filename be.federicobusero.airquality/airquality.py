@@ -353,31 +353,40 @@ class AirQuality(Activity):
         row.set_style_bg_opa(lv.OPA.TRANSP, 0)
         row.set_style_border_width(0, 0)
         row.set_style_pad_hor(12, 0)
-
+        row.set_style_pad_ver(0, 0)  # Verwijder verticale padding die overflow veroorzaakt
+    
+        # LVGL 9.4: Schakel scrolling en de scrollbar op de RIJ ZELF uit
+        row.remove_flag(lv.obj.FLAG.SCROLLABLE)
+        row.set_scrollbar_mode(lv.SCROLLBAR_MODE.OFF)
+    
         icon_lbl = lv.label(row)
         icon_lbl.set_text(icon_symbol)
         icon_lbl.set_style_text_color(lv.color_hex(0xFFFFFF), 0)
         if hasattr(lv, "font_montserrat_22"):
             icon_lbl.set_style_text_font(lv.font_montserrat_22, 0)
         icon_lbl.set_width(60)
-
+    
         val_lbl = lv.label(row)
         val_lbl.set_text(value_str)
         val_lbl.set_style_text_color(lv.color_hex(0xFFFFFF), 0)
         if hasattr(lv, "font_montserrat_28"):
             val_lbl.set_style_text_font(lv.font_montserrat_28, 0)
-
+    
         bar = lv.obj(row)
         bar.set_size(12, 45)
         bar.set_style_radius(6, 0)
         bar.set_style_border_width(0, 0)
-
+    
+        # Schakel eventuele scrollbar op het bar-object zelf ook uit
+        bar.remove_flag(lv.obj.FLAG.SCROLLABLE)
+        bar.set_scrollbar_mode(lv.SCROLLBAR_MODE.OFF)
+    
         if show_bar:
             bar.set_style_bg_color(lv.color_hex(self.COLOR_NEUTRAL), 0)
             bar.set_style_bg_opa(lv.OPA.COVER, 0)
         else:
             bar.set_style_bg_opa(lv.OPA.TRANSP, 0)
-
+    
         return val_lbl, bar
 
     def _get_humidity_color(self, humi):
