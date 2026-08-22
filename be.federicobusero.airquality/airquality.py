@@ -425,7 +425,7 @@ class AirQuality(Activity):
                 self.bar_humi.set_style_bg_color(lv.color_hex(humi_color), 0)
 
             if co2 is not None:
-                self.lbl_co2.set_text(f"{co2:04d} ppm")
+                self.lbl_co2.set_text(f"{co2} ppm")
                 co2_color = self._get_co2_color(co2)
                 self.bar_co2.set_style_bg_color(lv.color_hex(co2_color), 0)
         except RuntimeError:
