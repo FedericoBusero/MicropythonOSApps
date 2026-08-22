@@ -12,41 +12,49 @@ class SCD4x:
         self.state = "INIT"
         self.target_time = 0
 
+    @staticmethod
+    def _check_crc(b1, b2, crc_val):
+        crc = 0xFF
+        for b in (b1, b2):
+            crc ^= b
+            for _ in range(8):
+                if crc & 0x80:
+                    crc = ((crc << 1) ^ 0x31) & 0xFF
+                else:
+                    crc = (crc << 1) & 0xFF
+        return crc == crc_val
+
     def start(self):
-        """Initiates non-blocking reset & periodic measurement sequence."""
         try:
-            # Step 1: Send stop command to reset state machine
             self.i2c.writeto(self.I2C_ADDR, b'\x3f\x86')
             self.state = "WAIT_START"
-            # Schedule start command 500ms from now
             self.target_time = time.ticks_add(time.ticks_ms(), 500)
         except Exception as e:
-            print("SCD40/SCD41 start error:", e)
+            print("SCD4x start error:", e)
 
     def _process(self):
-        """Advances internal timing states non-blockingly."""
         now = time.ticks_ms()
         if self.state == "WAIT_START":
             if time.ticks_diff(now, self.target_time) >= 0:
                 try:
-                    # Step 2: Start periodic measurement mode
                     self.i2c.writeto(self.I2C_ADDR, b'\x21\xb1')
                     self.state = "RUNNING"
                 except Exception as e:
-                    print("SCD40 start error:", e)
+                    print("SCD4x start error:", e)
                     self.state = "ERROR"
 
     def is_data_ready(self):
-        """Non-blocking check (0xE4B8) to see if new data is available."""
         if self.state != "RUNNING":
             return False
         try:
             self.i2c.writeto(self.I2C_ADDR, b'\xe4\xb8')
             data = self.i2c.readfrom(self.I2C_ADDR, 3)
-            status = (data[0] << 8) | data[1]
-            return (status & 0x07FF) != 0
+            if self._check_crc(data[0], data[1], data[2]):
+                status = (data[0] << 8) | data[1]
+                return (status & 0x07FF) != 0
         except Exception:
-            return False
+            pass
+        return False
 
     def read_measurement(self):
         self._process()
@@ -58,6 +66,12 @@ class SCD4x:
             self.i2c.writeto(self.I2C_ADDR, b'\xec\x05')
             data = self.i2c.readfrom(self.I2C_ADDR, 9)
 
+            if not (self._check_crc(data[0], data[1], data[2]) and
+                    self._check_crc(data[3], data[4], data[5]) and
+                    self._check_crc(data[6], data[7], data[8])):
+                print("SCD4x CRC error")
+                return None, None, None
+
             co2 = (data[0] << 8) | data[1]
             raw_temp = (data[3] << 8) | data[4]
             temp = -45.0 + (175.0 * float(raw_temp) / 65535.0)
@@ -66,7 +80,7 @@ class SCD4x:
 
             return co2, temp, humi
         except Exception as e:
-            print("SCD40/SCD41 read error:", e)
+            print("SCD4x read error:", e)
             return None, None, None
 
 
@@ -78,6 +92,18 @@ class SHT3x:
         self.state = "IDLE"
         self.target_time = 0
 
+    @staticmethod
+    def _check_crc(b1, b2, crc_val):
+        crc = 0xFF
+        for b in (b1, b2):
+            crc ^= b
+            for _ in range(8):
+                if crc & 0x80:
+                    crc = ((crc << 1) ^ 0x31) & 0xFF
+                else:
+                    crc = (crc << 1) & 0xFF
+        return crc == crc_val
+
     def start(self):
         pass
 
@@ -86,19 +112,23 @@ class SHT3x:
 
         if self.state == "IDLE":
             try:
-                # Trigger single-shot measurement
                 self.i2c.writeto(self.addr, b'\x2c\x06')
                 self.state = "WAIT_MEASURE"
-                self.target_time = time.ticks_add(now, 15)  # 15ms non-blocking conversion
+                self.target_time = time.ticks_add(now, 20)
             except Exception as e:
                 print("SHT3x trigger error:", e)
             return None, None, None
 
         elif self.state == "WAIT_MEASURE":
             if time.ticks_diff(now, self.target_time) >= 0:
+                self.state = "IDLE"
                 try:
                     data = self.i2c.readfrom(self.addr, 6)
-                    self.state = "IDLE"
+                    
+                    if not (self._check_crc(data[0], data[1], data[2]) and 
+                            self._check_crc(data[3], data[4], data[5])):
+                        print("SHT3x CRC error")
+                        return None, None, None
 
                     raw_temp = (data[0] << 8) | data[1]
                     temp = -45.0 + (175.0 * raw_temp / 65535.0)
@@ -109,7 +139,6 @@ class SHT3x:
                     return None, temp, humi
                 except Exception as e:
                     print("SHT3x read error:", e)
-                    self.state = "IDLE"
 
         return None, None, None
 
@@ -126,6 +155,7 @@ class AHT20:
     def start(self):
         try:
             self.i2c.writeto(self.I2C_ADDR, b'\xbe\x08\x00')
+            time.sleep_ms(10)
         except Exception:
             pass
 
@@ -134,21 +164,20 @@ class AHT20:
 
         if self.state == "IDLE":
             try:
-                # Trigger measurement
                 self.i2c.writeto(self.I2C_ADDR, b'\xac\x33\x00')
                 self.state = "WAIT_MEASURE"
-                self.target_time = time.ticks_add(now, 80)  # 80ms conversion delay
+                self.target_time = time.ticks_add(now, 80)
             except Exception as e:
                 print("AHT20 trigger error:", e)
             return None, None, None
 
         elif self.state == "WAIT_MEASURE":
             if time.ticks_diff(now, self.target_time) >= 0:
+                self.state = "IDLE"
                 try:
                     data = self.i2c.readfrom(self.I2C_ADDR, 7)
-                    self.state = "IDLE"
 
-                    # Check busy bit (bit 7 of byte 0)
+                    # Bit 7: Busy (1 = bezig, 0 = gereed)
                     if (data[0] & 0x80) != 0:
                         return None, None, None
 
@@ -161,7 +190,6 @@ class AHT20:
                     return None, temp, humi
                 except Exception as e:
                     print("AHT20 read error:", e)
-                    self.state = "IDLE"
 
         return None, None, None
 
@@ -175,6 +203,19 @@ class AM2320_DHT12:
         self.state = "IDLE"
         self.target_time = 0
 
+    @staticmethod
+    def _crc16(buf):
+        crc = 0xFFFF
+        for pos in buf:
+            crc ^= pos
+            for _ in range(8):
+                if (crc & 0x0001) != 0:
+                    crc >>= 1
+                    crc ^= 0xA001
+                else:
+                    crc >>= 1
+        return crc
+
     def start(self):
         pass
 
@@ -182,24 +223,21 @@ class AM2320_DHT12:
         now = time.ticks_ms()
 
         if self.state == "IDLE":
-            # Wake up sensor
             try:
                 self.i2c.writeto(self.I2C_ADDR, b'')
             except Exception:
-                pass
+                pass  # AM2320 reageert met NACK op wake-up puls
             self.state = "WOKEN"
-            self.target_time = time.ticks_add(now, 2)
+            self.target_time = time.ticks_add(now, 3)
             return None, None, None
 
         elif self.state == "WOKEN":
             if time.ticks_diff(now, self.target_time) >= 0:
                 try:
-                    # Issue read command
                     self.i2c.writeto(self.I2C_ADDR, b'\x03\x00\x04')
                     self.state = "WAIT_READ"
-                    self.target_time = time.ticks_add(now, 2)
+                    self.target_time = time.ticks_add(now, 3)
                 except Exception:
-                    # Fallback path directly to DHT12
                     self.state = "DHT12_READ"
             return None, None, None
 
@@ -209,6 +247,11 @@ class AM2320_DHT12:
                 try:
                     data = self.i2c.readfrom(self.I2C_ADDR, 8)
                     if data[0] == 0x03 and data[1] == 0x04:
+                        crc_val = data[6] | (data[7] << 8)
+                        if self._crc16(data[:6]) != crc_val:
+                            print("AM2320 CRC error")
+                            return None, None, None
+
                         humi = ((data[2] << 8) | data[3]) / 10.0
                         raw_temp = ((data[4] & 0x7F) << 8) | data[5]
                         temp = -raw_temp / 10.0 if (data[4] & 0x80) else raw_temp / 10.0
@@ -261,7 +304,6 @@ class AirQuality(Activity):
             self.i2c = None
             print("DeviceManager I2C error:", e)
 
-        # Screen Styling
         screen.set_style_bg_color(lv.color_hex(0x1E1E1E), 0)
         screen.set_style_bg_opa(lv.OPA.COVER, 0)
 
@@ -273,29 +315,9 @@ class AirQuality(Activity):
         container.set_style_border_width(0, 0)
         container.set_style_pad_all(10, 0)
 
-        # Row 1: Temperature
-        self.lbl_temp, _ = self._create_row(
-            parent=container,
-            icon_symbol="Temp",
-            value_str="--.- °C",
-            show_bar=False
-        )
-
-        # Row 2: Humidity
-        self.lbl_humi, self.bar_humi = self._create_row(
-            parent=container,
-            icon_symbol="Humi",
-            value_str="-- %",
-            show_bar=True
-        )
-
-        # Row 3: CO₂
-        self.lbl_co2, self.bar_co2 = self._create_row(
-            parent=container,
-            icon_symbol="CO2",
-            value_str="----",
-            show_bar=True
-        )
+        self.lbl_temp, _ = self._create_row(container, "Temp", "--.- °C", show_bar=False)
+        self.lbl_humi, self.bar_humi = self._create_row(container, "Humi", "-- %", show_bar=True)
+        self.lbl_co2, self.bar_co2 = self._create_row(container, "CO2", "----", show_bar=True)
 
         self.setContentView(screen)
 
@@ -321,7 +343,6 @@ class AirQuality(Activity):
             return None
 
     def onStart(self, screen):
-        # Poll higher frequency (e.g., every 500ms) to let non-blocking state machines tick smoothly
         self.timer = lv.timer_create(self._timer_cb, 500, None)
 
     def _create_row(self, parent, icon_symbol, value_str, show_bar=True):
@@ -399,14 +420,11 @@ class AirQuality(Activity):
                 co2_color = self._get_co2_color(co2)
                 self.bar_co2.set_style_bg_color(lv.color_hex(co2_color), 0)
         except RuntimeError:
-            # Prevents LvReferenceError if UI elements were deleted mid-update
             pass
-            
+
     def onStop(self, screen):
-        """Safely delete the LVGL timer upon leaving the Activity."""
         if self.timer:
             try:
-                # Modern MicroPython LVGL binding timer deletion
                 self.timer.delete()
             except AttributeError:
                 try:
